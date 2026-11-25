@@ -171,6 +171,11 @@ export const khaiAbi = [
   },
   {
     "inputs": [],
+    "name": "KaiMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "KaiNotSet",
     "type": "error"
   },

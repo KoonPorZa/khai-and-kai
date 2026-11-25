@@ -9,6 +9,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 
 interface IKhaiForKai {
     function burnForHatch(address from) external;
+    function totalSupply(uint256 id) external view returns (uint256);
 }
 
 interface IChickenRenderer {
@@ -22,6 +23,7 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
     uint64 public constant HATCH_DELAY = 2;
     uint256 public constant MAX_NOTE_BYTES = 140;
     uint8 public constant MAX_CARE_KIND = 5;
+    uint256 public constant MAX_CARE_PERIODS = 8760;
 
     struct Bird {
         uint8 breed;
@@ -111,6 +113,8 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
     error NoteTooLong();
     error ZeroAddress();
     error TransferFailed();
+    error TooManyPeriods();
+    error ZeroFee();
 
     constructor(
         address admin,
@@ -122,6 +126,7 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
     ) ERC721("Kai", "KAI") {
         if (admin == address(0) || farm == address(0) || khai_ == address(0) || renderer_ == address(0)) revert ZeroAddress();
         if (carePeriod_ == 0) revert ZeroQuantity();
+        if (careFee_ == 0) revert ZeroFee();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(FARM_ROLE, farm);
         khai = khai_;
@@ -139,7 +144,9 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
         if (first + n - 1 > type(uint32).max) revert InvalidBird(0);
         for (uint256 i; i < n; ++i) {
             Bird calldata b = birds[i];
-            if (b.breed > 9 || b.sex > 1 || b.plumage > 7) revert InvalidBird(i);
+            if (b.breed > 9 || b.sex > 1 || b.plumage > 7 || b.bornAt == 0 || b.bornAt > block.timestamp) {
+                revert InvalidBird(i);
+            }
             uint256 id = first + i;
             _birds[id] = b;
             _pool.push(uint32(id));
@@ -172,7 +179,8 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
     }
 
     function _startHatch(address owner) private returns (uint256 hatchId) {
-        if (pendingHatches >= _pool.length) revert PoolExhausted();
+        // I1 is enforced in Khai; this re-checks it here (outstanding eggs already exclude a burnt one).
+        if (pendingHatches + IKhaiForKai(khai).totalSupply(1) >= _pool.length) revert PoolExhausted();
         hatchId = ++hatchCount;
         uint64 revealBlock = uint64(block.number) + HATCH_DELAY;
         _hatches[hatchId] = Hatch(owner, revealBlock, 0, false);
@@ -252,7 +260,10 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
         if (msg.value != careFee * periods) revert WrongPayment();
         uint64 base = _carePaidUntil[tokenId];
         if (base < block.timestamp) base = uint64(block.timestamp);
-        uint64 until = base + uint64(periods * carePeriod);
+        if (periods > MAX_CARE_PERIODS) revert TooManyPeriods();
+        uint256 next = uint256(base) + periods * carePeriod;
+        if (next > type(uint64).max) revert TooManyPeriods();
+        uint64 until = uint64(next);
         _carePaidUntil[tokenId] = until;
         emit CarePaid(tokenId, msg.sender, periods, until);
     }
@@ -335,6 +346,7 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
     // ---------------------------------------------------------------- admin
 
     function setCareFee(uint256 careFee_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (careFee_ == 0) revert ZeroFee();
         careFee = careFee_;
         emit CareFeeSet(careFee_);
     }

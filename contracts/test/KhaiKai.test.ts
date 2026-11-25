@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { expect } from "chai";
 import hre from "hardhat";
-import { loadFixture, mine, time } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, mine, takeSnapshot, time } from "@nomicfoundation/hardhat-network-helpers";
 import { encodeAbiParameters, getAddress, keccak256, zeroAddress, type Hex } from "viem";
 import { verifyHatch, computeHatchSeed, computeHatchIndex } from "../lib/verifyHatch";
 import { loadCompose } from "../scripts/gen-art";
@@ -233,6 +233,66 @@ describe("Khai & Kai", () => {
       expect(await sys.kai.read.totalSupply()).to.equal(4n);
       await sys.kai.write.finishNext([10n]); // empty queue is a no-op
       expect(await sys.kai.read.poolSize()).to.equal(56n);
+    });
+  });
+
+  describe("I3 review fixes (M1, lows)", () => {
+    it("I3 finish order cannot change any hatch's bird: finishHatch(3) equals finishing 1, 2, 3 one by one", async () => {
+      const sys = await loadFixture(bigPool);
+      for (const u of sys.users.slice(0, 3)) await buyAndHatch(sys, u);
+      await mine(3);
+      const snap = await takeSnapshot();
+      const birds = async () => Promise.all([1n, 2n, 3n].map(async (id) => (await sys.kai.read.hatch([id])).birdId));
+      await sys.kai.write.finishHatch([3n]);
+      const direct = await birds();
+      await snap.restore();
+      for (const id of [1n, 2n, 3n]) await sys.kai.write.finishHatch([id]);
+      const stepwise = await birds();
+      await snap.restore();
+      await sys.kai.write.finishNext([1n]);
+      await sys.kai.write.finishNext([5n]);
+      const viaQueue = await birds();
+      expect(direct.every((b) => b !== 0)).to.equal(true);
+      expect(stepwise).to.deep.equal(direct);
+      expect(viaQueue).to.deep.equal(direct);
+      await assertI1(sys);
+    });
+
+    it("I3 a hatch owned by a contract that rejects ERC-721 does not block the queue (_mint, not _safeMint)", async () => {
+      const sys = await loadFixture(bigPool);
+      const rejecting = await hre.viem.deployContract("RejectingHatcher", []);
+      await rejecting.write.hatch([sys.khai.address], { value: PRICE });
+      const after = await buyAndHatch(sys, sys.users[0]);
+      await mineToReveal(sys, after);
+      await sys.kai.write.finishHatch([after]);
+      const first = await sys.kai.read.hatch([1n]);
+      expect(first.owner).to.equal(getAddress(rejecting.address));
+      expect(await sys.kai.read.ownerOf([BigInt(first.birdId)])).to.equal(getAddress(rejecting.address));
+      expect(await sys.kai.read.nextHatchToFinish()).to.equal(0n);
+    });
+
+    it("payCare rejects absurd period counts; careFee must be > 0; setKai checks the pairing; birth dates are validated", async () => {
+      const sys = await loadFixture(bigPool);
+      const { tokenId } = await hatchAndFinish(sys, sys.users[0]);
+      const max = await sys.kai.read.MAX_CARE_PERIODS();
+      expect(max).to.equal(8760n);
+      await expect(
+        sys.kai.write.payCare([tokenId, max + 1n], { account: sys.users[0].account, value: CARE_FEE * (max + 1n) }),
+      ).to.be.rejectedWith("TooManyPeriods");
+      await sys.kai.write.payCare([tokenId, max], { account: sys.users[0].account, value: CARE_FEE * max });
+      await expect(sys.kai.write.setCareFee([0n])).to.be.rejectedWith("ZeroFee");
+      await expect(
+        hre.viem.deployContract("Kai", [addr(sys.admin), addr(sys.farm), sys.khai.address, sys.renderer.address, 0n, CARE_PERIOD]),
+      ).to.be.rejectedWith("ZeroFee");
+      const khai2 = await hre.viem.deployContract("Khai", [addr(sys.admin), addr(sys.farm), PRICE, DAILY_LIMIT]);
+      await expect(khai2.write.setKai([sys.kai.address])).to.be.rejectedWith("KaiMismatch");
+      const now = await time.latest();
+      const f = { account: sys.farm.account };
+      const h = `0x${"44".repeat(32)}` as Hex;
+      await expect(sys.kai.write.registerBirds([[{ breed: 0, sex: 0, plumage: 0, bornAt: 0, recordHash: h }]], f)).to.be.rejectedWith("InvalidBird");
+      await expect(
+        sys.kai.write.registerBirds([[{ breed: 0, sex: 0, plumage: 0, bornAt: now + 86_400, recordHash: h }]], f),
+      ).to.be.rejectedWith("InvalidBird");
     });
   });
 

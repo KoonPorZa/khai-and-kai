@@ -1,4 +1,5 @@
-import { contracts, requireAllowedChain, waitTx } from "./lib/common";
+import hre from "hardhat";
+import { contracts, requireAllowedChain, waitForPendingNonce, waitTx } from "./lib/common";
 import { SAMPLE_BIRD_COUNT, sampleBirds } from "../lib/sampleBirds";
 
 const BATCH = 50;
@@ -7,6 +8,9 @@ async function main() {
   const chainId = await requireAllowedChain();
   const { kai } = await contracts(chainId);
   const birds = sampleBirds(SAMPLE_BIRD_COUNT);
+  // A crashed run may have left a batch in flight; read the count only after it confirms.
+  const [wallet] = await hre.viem.getWalletClients();
+  await waitForPendingNonce(wallet.account.address);
   const registered = Number(await kai.read.birdsRegistered());
   if (registered >= birds.length) {
     console.log(`Already ${registered} birds registered on chain ${chainId}; nothing to do.`);

@@ -12,6 +12,7 @@ interface IKaiForKhai {
     function pendingHatches() external view returns (uint256);
     function startHatchFor(address owner) external returns (uint256 hatchId);
     function renderer() external view returns (address);
+    function khai() external view returns (address);
 }
 
 interface IEggRenderer {
@@ -53,6 +54,7 @@ contract Khai is ERC1155Supply, AccessControl, Pausable, ReentrancyGuard {
     error KaiNotSet();
     error ZeroAddress();
     error TransferFailed();
+    error KaiMismatch();
 
     constructor(address admin, address farm, uint256 price_, uint256 dailyLimit_) ERC1155("") {
         if (admin == address(0) || farm == address(0)) revert ZeroAddress();
@@ -130,6 +132,7 @@ contract Khai is ERC1155Supply, AccessControl, Pausable, ReentrancyGuard {
     function setKai(address kai_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (kai != address(0)) revert KaiAlreadySet();
         if (kai_ == address(0)) revert ZeroAddress();
+        if (IKaiForKhai(kai_).khai() != address(this)) revert KaiMismatch();
         kai = kai_;
         emit KaiSet(kai_);
     }

@@ -19,6 +19,8 @@ export async function requireAllowedChain(): Promise<number> {
 
 export type Deployment = {
   chainId: number;
+  /** "partial" while deploy.ts is still running (or crashed); rerunning resumes from it. */
+  status: "partial" | "complete";
   deployer: Address;
   blockNumber: number;
   deployedAt: string;
@@ -47,6 +49,7 @@ export function readDeployment(chainId: number): Deployment {
 
 export async function contracts(chainId: number) {
   const d = readDeployment(chainId);
+  if (d.status !== "complete") throw new Error(`Deployment for chain ${chainId} is partial. Rerun deploy to finish it.`);
   return {
     deployment: d,
     khai: await hre.viem.getContractAt("Khai", d.contracts.Khai),
@@ -60,4 +63,19 @@ export async function waitTx(hash: `0x${string}`) {
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
   if (receipt.status !== "success") throw new Error(`Transaction ${hash} reverted`);
   return receipt;
+}
+
+/** Waits until the account has no pending transactions, so reads reflect every sent transaction. */
+export async function waitForPendingNonce(address: Address) {
+  const publicClient = await hre.viem.getPublicClient();
+  for (let i = 0; i < 120; i++) {
+    const [pending, latest] = await Promise.all([
+      publicClient.getTransactionCount({ address, blockTag: "pending" }),
+      publicClient.getTransactionCount({ address, blockTag: "latest" }),
+    ]);
+    if (pending === latest) return;
+    console.log(`  waiting for ${pending - latest} pending transaction(s) from ${address}...`);
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  throw new Error("Pending transactions did not confirm within 4 minutes");
 }
