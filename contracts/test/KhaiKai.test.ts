@@ -5,6 +5,7 @@ import hre from "hardhat";
 import { loadFixture, mine, time } from "@nomicfoundation/hardhat-network-helpers";
 import { encodeAbiParameters, getAddress, keccak256, zeroAddress, type Hex } from "viem";
 import { verifyHatch, computeHatchSeed, computeHatchIndex } from "../lib/verifyHatch";
+import { loadCompose } from "../scripts/gen-art";
 import {
   CARE_FEE,
   CARE_PERIOD,
@@ -463,6 +464,34 @@ describe("Khai & Kai", () => {
       }
       expect(await sys.renderer.read.bandId([42n])).to.equal("KK-0042");
       expect(await sys.renderer.read.bandId([12345n])).to.equal("KK-12345");
+    });
+
+    it("renderer output matches design/svg/compose.mjs byte for byte", async () => {
+      const sys = await loadFixture(bigPool);
+      const compose = await loadCompose();
+      const cases: [number, number, number, number][] = [];
+      for (let breed = 0; breed < 10; breed++)
+        for (let sex = 0; sex < 2; sex++) cases.push([breed, sex, (breed * 3 + sex * 5) % 8, [1, 42, 300, 12345][(breed + sex) % 4]]);
+      for (const [breed, sex, plumage, tokenId] of cases) {
+        const expected = compose.composeChicken({ breed, sex, plumage, tokenId });
+        expect(await sys.renderer.read.chickenSvg([BigInt(tokenId), breed, sex, plumage]), `${breed}/${sex}/${plumage}`).to.equal(expected);
+      }
+      // Through chickenURI as well.
+      const uri = await sys.renderer.read.chickenURI([
+        7n,
+        { breed: 4, sex: 1, plumage: 6, bornAt: 1_700_000_000, recordHash: `0x${"ab".repeat(32)}` },
+        0n,
+      ]);
+      const json = JSON.parse(decodeDataUri(uri, "data:application/json;base64,"));
+      expect(decodeDataUri(json.image, "data:image/svg+xml;base64,")).to.equal(
+        compose.composeChicken({ breed: 4, sex: 1, plumage: 6, tokenId: 7 }),
+      );
+      expect(await sys.renderer.read.eggSvg()).to.equal(compose.composeEgg());
+      const egg = JSON.parse(decodeDataUri(await sys.renderer.read.eggURI(), "data:application/json;base64,"));
+      expect(decodeDataUri(egg.image, "data:image/svg+xml;base64,")).to.equal(compose.composeEgg());
+      await expect(sys.renderer.read.chickenSvg([1n, 10, 0, 0])).to.be.rejectedWith("InvalidTraits");
+      await expect(sys.renderer.read.chickenSvg([1n, 0, 2, 0])).to.be.rejectedWith("InvalidTraits");
+      await expect(sys.renderer.read.chickenSvg([1n, 0, 0, 8])).to.be.rejectedWith("InvalidTraits");
     });
 
     it("tokenURI of a non-existent token reverts", async () => {

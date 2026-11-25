@@ -38,6 +38,7 @@
     "seed:testnet": "hardhat run scripts/seed-birds.ts --network bscTestnet",
     "farm:testnet": "hardhat run scripts/farm.ts --network bscTestnet",
     "export-abi": "hardhat run scripts/export-abi.ts",
-    "verify:sourcify": "hardhat run scripts/verify-sourcify.ts --network bscTestnet"
+    "verify:sourcify": "hardhat run scripts/verify-sourcify.ts --network bscTestnet",
+    "gen-art": "ts-node scripts/gen-art.ts"
   }
 }
