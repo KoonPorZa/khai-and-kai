@@ -193,6 +193,49 @@ describe("Khai & Kai", () => {
     });
   });
 
+  describe("I3 hatches finish in hatch-id order", () => {
+    it("I3 finishHatch(id) first finishes every earlier pending hatch, each drawn from its own pool size", async () => {
+      const sys = await loadFixture(bigPool);
+      const ids: bigint[] = [];
+      for (const u of sys.users.slice(0, 3)) ids.push(await buyAndHatch(sys, u));
+      expect(await sys.kai.read.nextHatchToFinish()).to.equal(1n);
+      await mineToReveal(sys, ids[2]);
+      await sys.kai.write.finishHatch([ids[2]], { account: sys.users[7].account });
+      expect(await sys.kai.read.pendingHatches()).to.equal(0n);
+      expect(await sys.kai.read.nextHatchToFinish()).to.equal(0n);
+      for (const [k, id] of ids.entries()) {
+        const h = await sys.kai.read.hatch([id]);
+        expect(h.birdId).to.not.equal(0);
+        expect(await sys.kai.read.ownerOf([BigInt(h.birdId)])).to.equal(getAddress(addr(sys.users[k])));
+        const [seed, size, index] = await sys.kai.read.hatchProof([id]);
+        expect(size).to.equal(60n - BigInt(k));
+        const block = await sys.publicClient.getBlock({ blockNumber: h.revealBlock });
+        expect(verifyHatch({ hatchId: id, revealBlock: h.revealBlock, usedFallback: h.usedFallback, revealBlockHash: block.hash, poolSizeAtFinish: size }, { seed, index }).ok).to.equal(true);
+      }
+      for (const id of ids) await expect(sys.kai.write.finishHatch([id])).to.be.rejectedWith("AlreadyFinished");
+    });
+
+    it("I3 finishNext advances the queue in bounded steps and stops at a hatch that is not ready", async () => {
+      const sys = await loadFixture(bigPool);
+      for (const u of sys.users.slice(0, 3)) await buyAndHatch(sys, u);
+      await mine(3);
+      const late = await buyAndHatch(sys, sys.users[3]);
+      await sys.kai.write.finishNext([2n]);
+      expect(await sys.kai.read.nextHatchToFinish()).to.equal(3n);
+      expect(await sys.kai.read.pendingHatches()).to.equal(2n);
+      // Hatch 3 is ready, hatch 4 (started one block ago) is not: only one finishes.
+      await sys.kai.write.finishNext([10n]);
+      expect(await sys.kai.read.nextHatchToFinish()).to.equal(late);
+      expect((await sys.kai.read.hatch([late])).birdId).to.equal(0);
+      await mine(2);
+      await sys.kai.write.finishNext([10n]);
+      expect(await sys.kai.read.nextHatchToFinish()).to.equal(0n);
+      expect(await sys.kai.read.totalSupply()).to.equal(4n);
+      await sys.kai.write.finishNext([10n]); // empty queue is a no-op
+      expect(await sys.kai.read.poolSize()).to.equal(56n);
+    });
+  });
+
   describe("I4 daily quota", () => {
     it("I4 the quota holds across buy and buyAndStartHatch and across split purchases", async () => {
       const sys = await loadFixture(bigPool);

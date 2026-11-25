@@ -76,6 +76,7 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
 
     uint256 public birdsRegistered;
     uint256 public hatchCount;
+    uint256 private _nextToFinish = 1;
     uint256 public pendingHatches;
     uint256 public totalCareProofs;
 
@@ -180,13 +181,40 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
         emit HatchStarted(hatchId, owner, revealBlock);
     }
 
-    /// @notice Finishes a pending hatch. Anyone may call once block.number > revealBlock.
+    /// @notice Finishes `hatchId`, first finishing every earlier pending hatch, so hatches always finish in
+    /// hatch-id order and finish order cannot change which bird a hatch gets. Anyone may call once
+    /// block.number > revealBlock. Use finishNext to advance a long queue in bounded gas.
     function finishHatch(uint256 hatchId) external nonReentrant returns (uint256 tokenId) {
         Hatch storage h = _hatches[hatchId];
         if (h.owner == address(0)) revert UnknownHatch();
         if (h.birdId != 0) revert AlreadyFinished();
         if (block.number <= h.revealBlock) revert TooEarly();
+        // Earlier hatches have revealBlock <= h.revealBlock, so they are ready as well.
+        uint256 id = _nextToFinish;
+        for (; id < hatchId; ++id) _finish(id);
+        tokenId = _finish(hatchId);
+        _nextToFinish = hatchId + 1;
+    }
 
+    /// @notice Finishes up to `maxCount` ready hatches from the front of the queue. Returns how many finished.
+    function finishNext(uint256 maxCount) external nonReentrant returns (uint256 finished) {
+        uint256 id = _nextToFinish;
+        uint256 last = hatchCount;
+        while (finished < maxCount && id <= last && block.number > _hatches[id].revealBlock) {
+            _finish(id);
+            ++id;
+            ++finished;
+        }
+        _nextToFinish = id;
+    }
+
+    /// @notice Id of the oldest pending hatch (the next one to finish), or 0 when none is pending.
+    function nextHatchToFinish() external view returns (uint256) {
+        return pendingHatches == 0 ? 0 : _nextToFinish;
+    }
+
+    function _finish(uint256 hatchId) private returns (uint256 tokenId) {
+        Hatch storage h = _hatches[hatchId];
         (bytes32 seed, bool usedFallback) = hatchSeed(hatchId, h.revealBlock);
         uint256 size = _pool.length;
         uint256 index = uint256(seed) % size;

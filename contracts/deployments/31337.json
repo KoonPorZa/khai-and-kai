@@ -2,7 +2,7 @@
   "chainId": 31337,
   "deployer": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
   "blockNumber": 1,
-  "deployedAt": "2026-11-25T18:06:27.236Z",
+  "deployedAt": "2026-11-25T18:10:26.782Z",
   "contracts": {
     "Khai": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
     "Kai": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
@@ -18,9 +18,9 @@
     "hatchDelayBlocks": 2
   },
   "gas": {
-    "deploy KaiRenderer": "3203912",
+    "deploy KaiRenderer": "3203924",
     "deploy Khai": "2051908",
-    "deploy Kai": "3017391",
+    "deploy Kai": "3086735",
     "Khai.setKai": "47211"
   }
 }
