@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Get an egg</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@500;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+body{margin:0}
+a{color:#f0b90b;text-decoration:none}a:hover{color:#ffd23f}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 980px; box-sizing: border-box; background: #0e1116; color: #f2f4f7; font-family: Inter, system-ui, sans-serif; font-size: 15px; line-height: 1.5; display: flex; flex-direction: column">
+
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px">
+<a href="Main.dc.html" style="display: flex; align-items: baseline; gap: 8px; color: #f2f4f7; font-family: 'Space Grotesk', Inter, sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.01em">Khai &amp; Kai <span style="font-family: 'Noto Sans Thai', sans-serif; font-weight: 500; font-size: 13px; color: #f0b90b">ไข่ ไก่</span></a>
+<button style="min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid #262c36; background: #161b23; color: #f2f4f7; font: 500 13px 'IBM Plex Mono', monospace">0x7a3F…9fA2</button>
+</div>
+
+<div style="padding: 8px 20px 0; display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.15; letter-spacing: -0.02em">Get an egg</h1>
+<p style="margin: 0; color: #8c95a3">One egg hatches into one bird from the coop. You find out which when it hatches.</p>
+</div>
+
+<div style="margin: 20px 20px 0; border-radius: 18px; background: #161b23; border: 1px solid #262c36; display: flex; flex-direction: column; align-items: center; padding: 28px 20px 20px; gap: 16px; position: relative; overflow: hidden">
+<span aria-hidden="true" style="position: absolute; left: 14px; top: 2px; font-family: 'Noto Sans Thai', sans-serif; font-weight: 700; font-size: 84px; line-height: 1; color: #1e2530">ไข่</span>
+<svg width="132" height="168" viewBox="0 0 50 64" role="img" aria-label="An egg" style="position: relative; filter: drop-shadow(0 0 26px rgba(240,185,11,0.28))"><path d="M25 3 C38 3 47 24 47 38 C47 52 37 61 25 61 C13 61 3 52 3 38 C3 24 12 3 25 3 Z" fill="#f2f4f7"/><path d="M12 22 C14 14 19 8 24 7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.9"/><ellipse cx="25" cy="48" rx="16" ry="9" fill="#c5ccd6" opacity="0.45"/></svg>
+<div style="display: flex; align-items: baseline; gap: 8px; position: relative">
+<span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -0.02em">0.01</span>
+<span style="color: #8c95a3; font-size: 16px">tBNB each</span>
+</div>
+</div>
+
+<div style="margin: 14px 20px 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<div style="padding: 14px 16px; border-radius: 14px; background: #161b23; border: 1px solid #262c36">
+<div style="font-size: 13px; color: #8c95a3">Eggs left</div>
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 24px">178</div>
+<div style="font-size: 12px; color: #8c95a3">one per bird waiting</div>
+</div>
+<div style="padding: 14px 16px; border-radius: 14px; background: #161b23; border: 1px solid #262c36">
+<div style="font-size: 13px; color: #8c95a3">Your eggs today</div>
+<div style="display: flex; gap: 6px; align-items: center; height: 36px">
+<span style="width: 18px; height: 23px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: #f0b90b"></span>
+<span style="width: 18px; height: 23px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; border: 2px solid #8c95a3; box-sizing: border-box"></span>
+<span style="width: 18px; height: 23px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; border: 2px solid #8c95a3; box-sizing: border-box"></span>
+</div>
+<div style="font-size: 12px; color: #8c95a3">1 of 3 used, resets 07:00</div>
+</div>
+</div>
+
+<div style="margin: 20px 20px 0; display: flex; flex-direction: column; gap: 10px">
+<a href="Hatch.dc.html" style="display: block; text-align: center; min-height: 56px; line-height: 56px; border-radius: 12px; background: #f0b90b; color: #0e1116; font-weight: 600; font-size: 16px">Buy and hatch now</a>
+<p style="margin: 0; text-align: center; font-size: 13px; color: #8c95a3">Two wallet confirmations: one to buy and start, one to reveal your bird.</p>
+</div>
+
+<div style="margin: 22px 20px 0; padding: 16px; border-radius: 14px; border: 1px solid #262c36; display: flex; flex-direction: column; gap: 12px">
+<div style="font-weight: 600">Or keep eggs for later</div>
+<div style="display: flex; gap: 10px; align-items: center">
+<label for="qty" style="font-size: 14px; color: #8c95a3">Quantity</label>
+<div style="display: flex; align-items: center; border: 1px solid #262c36; border-radius: 10px; overflow: hidden">
+<button aria-label="One fewer" style="width: 44px; height: 44px; background: #161b23; color: #f2f4f7; border: 0; font-size: 20px">−</button>
+<input id="qty" value="2" inputmode="numeric" style="width: 44px; height: 44px; box-sizing: border-box; text-align: center; background: #0e1116; color: #f2f4f7; border: 0; font: 600 16px Inter, sans-serif">
+<button aria-label="One more" style="width: 44px; height: 44px; background: #161b23; color: #f2f4f7; border: 0; font-size: 20px">+</button>
+</div>
+<span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 14px">0.02 tBNB</span>
+</div>
+<a href="Coop.dc.html" style="display: block; text-align: center; min-height: 48px; line-height: 48px; border-radius: 12px; border: 1.5px solid #f2f4f7; color: #f2f4f7; font-weight: 600">Buy 2 eggs</a>
+<p style="margin: 0; font-size: 13px; color: #8c95a3">Eggs sit in your coop until you hatch them. You can also send one to a friend.</p>
+</div>
+
+<nav aria-label="Main" style="margin-top: auto; position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: #161b23; border-top: 1px solid #262c36">
+<a href="Main.dc.html" style="min-height: 56px; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 14px; color: #8c95a3">Home</a>
+<a href="Eggs.dc.html" aria-current="page" style="min-height: 56px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; color: #f0b90b">Eggs</a>
+<a href="Coop.dc.html" style="min-height: 56px; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 14px; color: #8c95a3">My coop</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":980}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
