@@ -50,10 +50,10 @@ The UI calls things **Egg** and **Chicken**. Khai and Kai are the brand and the 
 
 ### 4.3 Hatch (commit–reveal)
 1. `Kai.startHatch()` burns one of the caller's eggs (or the buy-and-hatch path does the same without an egg). It records `revealBlock = block.number + 2` and reserves one bird's worth of pool capacity.
-2. Once `block.number > revealBlock`, anyone calls `Kai.finishHatch(hatchId)`. Seed = `keccak256(blockhash(revealBlock), hatchId)`. `index = seed % pool.length`; that bird leaves the pool (swap-remove) and its token is minted to the hatch's owner.
+2. Once `block.number > revealBlock`, anyone calls `Kai.finishHatch(hatchId)`. Seed = `keccak256(blockhash(revealBlock), hatchId)`. `index = seed % pool.length`; that bird leaves the pool (swap-remove) and its token is minted to the hatch's owner. **Hatches finish strictly in hatch-id order:** `finishHatch(id)` first finishes every earlier pending hatch, and `finishNext(maxCount)` advances the queue in bounded gas. Finish order therefore cannot change which bird a hatch gets.
 3. The web app sends step 2 automatically about 1.5 s after step 1 confirms (block time is about 0.45 s) and plays the hatch animation in between. A new user confirms twice in total.
 4. `blockhash` covers only the last 256 blocks (about 2 minutes). After that, `finishHatch` uses `keccak256(hatchId, revealBlock)` instead and marks the hatch as `fallback`.
-5. The chicken page shows the hatch record and a **Verify** button that recomputes the seed and index in the browser.
+5. The chicken page shows the hatch record and a **Check the draw** button that recomputes the seed and the pool position in the browser from the block hash (`hatchProof(hatchId)` gives the stored seed, pool size and position to compare with). It proves the position was not chosen by anyone; which bird sat at that position is contract state at that block, visible to an archive node.
 
 Stated limitation: a caller can see the block hash before finishing and could choose to wait for the fallback, and a block producer can influence a block hash. With no tiers there is no better or worse bird, so this is accepted on testnet. Production uses a VRF.
 
@@ -133,7 +133,10 @@ function carePeriod() view returns (uint64);             // immutable, seconds
 function registerBirds(Bird[] calldata birds);           // FARM_ROLE
 function startHatch() returns (uint256 hatchId);         // burns 1 egg of msg.sender
 function startHatchFor(address owner) returns (uint256 hatchId);   // only Khai
-function finishHatch(uint256 hatchId) returns (uint256 tokenId);   // anyone; TooEarly, AlreadyFinished
+function finishHatch(uint256 hatchId) returns (uint256 tokenId);   // anyone; finishes earlier pending hatches first; TooEarly, AlreadyFinished
+function finishNext(uint256 maxCount) returns (uint256 finished);  // anyone; advances the FIFO queue
+function nextHatchToFinish() view returns (uint256);
+function hatchProof(uint256 hatchId) view returns (bytes32 seed, uint256 poolSizeAtFinish, uint256 index);
 function payCare(uint256 tokenId, uint256 periods) payable;        // WrongPayment, ZeroQuantity
 function postCareProof(uint256 tokenId, uint8 kind, bytes32 contentHash, string calldata note);  // FARM_ROLE
 function isOverdue(uint256 tokenId) view returns (bool);
@@ -211,7 +214,7 @@ Roles (OpenZeppelin `AccessControl`, on both Khai and Kai): `DEFAULT_ADMIN_ROLE`
 - [ ] I1–I7 covered by passing tests
 - [ ] A new wallet can connect, buy and hatch with two confirmations, and see the chicken in the app and in the explorer with its on-chain art
 - [ ] The 4th egg of the day is rejected with a clear message
-- [ ] Verify recomputes the same bird from the block hash
+- [ ] Check the draw recomputes the same seed and pool position from the block hash
 - [ ] A hatch left past 256 blocks still finishes, marked as fallback
 - [ ] Care can be paid; an overdue chicken shows Overdue and cannot be transferred; a posted care proof appears on the timeline
 - [ ] The app works read-only with no wallet and makes no `eth_getLogs` call
