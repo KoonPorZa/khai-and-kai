@@ -271,6 +271,24 @@ describe("Khai & Kai", () => {
       expect(await sys.kai.read.nextHatchToFinish()).to.equal(0n);
     });
 
+    it("payCare uses a checked uint64 deadline: an overflowing carePaidUntil reverts instead of truncating", async () => {
+      const [admin, farm, user] = await hre.viem.getWalletClients();
+      const renderer = await hre.viem.deployContract("KaiRenderer", []);
+      const khai = await hre.viem.deployContract("Khai", [addr(admin), addr(farm), PRICE, DAILY_LIMIT]);
+      const huge = 2n ** 63n;
+      const kai = await hre.viem.deployContract("Kai", [addr(admin), addr(farm), khai.address, renderer.address, CARE_FEE, huge]);
+      await khai.write.setKai([kai.address]);
+      await kai.write.registerBirds([[{ breed: 1, sex: 0, plumage: 2, bornAt: 1_700_000_000, recordHash: `0x${"55".repeat(32)}` }]], {
+        account: farm.account,
+      });
+      await khai.write.buyAndStartHatch({ account: user.account, value: PRICE });
+      await mine(3);
+      await kai.write.finishHatch([1n]);
+      const tokenId = BigInt((await kai.read.hatch([1n])).birdId);
+      await expect(kai.write.payCare([tokenId, 1n], { account: user.account, value: CARE_FEE })).to.be.rejectedWith("TooManyPeriods");
+      await expect(kai.write.payCare([tokenId, 0n], { account: user.account, value: 0n })).to.be.rejectedWith("ZeroQuantity");
+    });
+
     it("payCare rejects absurd period counts; careFee must be > 0; setKai checks the pairing; birth dates are validated", async () => {
       const sys = await loadFixture(bigPool);
       const { tokenId } = await hatchAndFinish(sys, sys.users[0]);
