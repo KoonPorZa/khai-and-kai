@@ -103,6 +103,22 @@ export function useChicken(tokenId: bigint | undefined) {
   });
 }
 
+/** A registered bird by id (sponsored or not). Errors, or an id above birdsRegistered, mean it does not exist. */
+export function useBird(birdId: bigint | undefined) {
+  const stats = useStats();
+  const registered = stats.data?.birdsRegistered;
+  const inRange = birdId !== undefined && birdId > 0n && registered !== undefined && birdId <= registered;
+  const q = useReadContract({
+    address: deployment?.kai,
+    abi: kaiAbi,
+    functionName: "bird",
+    args: [birdId ?? 0n],
+    chainId,
+    query: { enabled: !!deployment && inRange, staleTime: 60_000, retry: false },
+  });
+  return { bird: inRange ? q.data : undefined, isLoading: stats.isLoading || (inRange && q.isLoading), registered };
+}
+
 export function useHatch(hatchId: bigint | undefined) {
   return useReadContracts({
     contracts: [

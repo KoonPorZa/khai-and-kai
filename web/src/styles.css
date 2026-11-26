@@ -421,3 +421,11 @@ textarea { resize: vertical; }
 .hatch-bird .chip-sm { position: absolute; left: 8px; top: 8px; right: auto; font-size: 11px; padding: 2px 8px; }
 .hatch-inset { position: absolute; right: -14px; bottom: -14px; padding: 3px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,.5); line-height: 0; }
 .hatch-inset .bird-glyph { border-radius: 10px; }
+
+/* toasts sit in the top layer (popover) so a modal dialog cannot cover them */
+.toasts[popover] { position: fixed; inset: auto 16px 72px 16px; width: auto; height: auto; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; overflow: visible; }
+.toasts[popover]:not(:popover-open) { display: none; }
+@media (min-width: 900px) { .toasts[popover] { inset: auto 16px 24px 16px; } }
+.wallet-help { display: flex; flex-direction: column; gap: 8px; }
+button.cell-dark { padding: 0; border: 0; cursor: pointer; }
+button.cell-dark:hover { background: #3a4452; transform: scale(1.35); position: relative; z-index: 2; }

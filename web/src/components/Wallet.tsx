@@ -37,7 +37,9 @@ function ConnectDialog({ open, onClose }: { open: boolean; onClose: () => void }
   const detected = connectors.filter((c) => c.type === "injected" && c.id !== "injected");
   const generic = connectors.filter((c) => c.id === "injected");
   const local = __LOCAL__ ? connectors.filter((c) => c.id === "mock") : [];
-  const list = [...(detected.length > 0 ? detected : generic), ...local];
+  // A generic injected connector is only worth offering when the page really has a provider.
+  const hasInjected = typeof window !== "undefined" && "ethereum" in window && !!(window as { ethereum?: unknown }).ethereum;
+  const list = [...(detected.length > 0 ? detected : hasInjected ? generic : []), ...local];
 
   const pick = async (id: string) => {
     const connector = connectors.find((c) => c.uid === id);
@@ -62,9 +64,14 @@ function ConnectDialog({ open, onClose }: { open: boolean; onClose: () => void }
         </div>
         <p className="muted small">Your wallet is your account. Nothing is stored on a server.</p>
         {list.length === 0 ? (
-          <p className="notice">
-            No browser wallet found. Install MetaMask, Rabby, Trust Wallet or Binance Wallet, then reload this page. You can still browse everything read-only.
-          </p>
+          <div className="notice wallet-help">
+            <strong>No wallet found in this browser</strong>
+            <span>
+              On a computer, install a wallet extension such as <a href="https://metamask.io/download/" target="_blank" rel="noreferrer">MetaMask</a>, then reload this page.
+            </span>
+            <span>On a phone, open this page inside your wallet app's browser.</span>
+            <span>You can still browse everything read-only.</span>
+          </div>
         ) : (
           <ul className="wallet-list">
             {list.map((c) => (

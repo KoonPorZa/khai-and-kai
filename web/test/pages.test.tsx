@@ -19,6 +19,8 @@ vi.mock("../src/config/chains", async (original) => {
 });
 
 import { App } from "../src/App";
+import { WalletProvider } from "../src/components/Wallet";
+import { ToastProvider } from "../src/components/Toast";
 
 const ETH = 10n ** 18n;
 const birdOf = (breed: number, sex: number, plumage: number) => ({ breed, sex, plumage, bornAt: 1_790_000_000n, recordHash: `0x${"00".repeat(32)}` });
@@ -88,6 +90,31 @@ describe("not deployed on testnet", () => {
   });
 });
 
+describe("connect dialog without a wallet", () => {
+  it("explains what to do instead of offering a dead Browser wallet button", () => {
+    delete (window as { ethereum?: unknown }).ethereum;
+    render(
+      <WalletProvider>
+        <span />
+      </WalletProvider>,
+    );
+    expect(screen.getByText("No wallet found in this browser")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "MetaMask", hidden: true }).getAttribute("href")).toBe("https://metamask.io/download/");
+    expect(screen.getByText(/open this page inside your wallet app's browser/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: /faucet/, hidden: true })).toBeTruthy();
+    expect(screen.queryByText("Browser wallet")).toBeNull();
+  });
+
+  it("renders toasts in the top layer so they sit above the dialog, with library text removed", () => {
+    const { container } = render(
+      <ToastProvider>
+        <span />
+      </ToastProvider>,
+    );
+    expect(container.querySelector(".toasts")?.getAttribute("popover")).toBe("manual");
+  });
+});
+
 describe("wallet and network", () => {
   it("offers to switch when the wallet is on another chain", () => {
     deployedBasics();
@@ -116,6 +143,7 @@ describe("home", () => {
     expect(container.querySelectorAll(".cell-hatch")).toHaveLength(1);
     expect(container.querySelectorAll(".cell-dark")).toHaveLength(26);
     expect(screen.getByLabelText("Open chicken KK-0009")).toBeTruthy();
+    expect(screen.getByLabelText("KK-0002, waiting for a sponsor")).toBeTruthy();
     expect(screen.getByRole("link", { name: /Source on GitHub/ }).getAttribute("href")).toBe("https://github.com/KoonPorZa/khai-and-kai");
     const kai = screen.getByRole("link", { name: /^Kai 0x/ });
     expect(kai.getAttribute("href")).toBe(`https://testnet.bscscan.com/address/${DEPLOYMENT.kai}`);
@@ -266,13 +294,23 @@ describe("chicken page", () => {
     expect(screen.getByText(/Fallback draw/)).toBeTruthy();
   });
 
-  it("says a bird without a sponsor is waiting, and rejects a bad band number", () => {
+  it("shows a registered bird without a sponsor with its traits and art, and keeps ids above the registered count not found", () => {
     deployedBasics();
     state.reads.chicken = () => {
       throw new Error("ERC721NonexistentToken");
     };
+    state.reads.bird = () => birdOf(3, 1, 4);
     show("/chicken/17");
-    expect(screen.getByText(/has no sponsor yet/)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Polish rooster" })).toBeTruthy();
+    expect(screen.getByText("KK-0017")).toBeTruthy();
+    expect(screen.getByText("This bird has no sponsor yet")).toBeTruthy();
+    expect(screen.getByText("Splash")).toBeTruthy();
+    expect(screen.getByRole("img", { name: /own art/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Get an egg" }).getAttribute("href")).toBe("/eggs");
+    expect(screen.getByText("Breed illustration")).toBeTruthy();
+    cleanup();
+    show("/chicken/31");
+    expect(screen.getByText("Chicken not found")).toBeTruthy();
     cleanup();
     show("/chicken/abc");
     expect(screen.getByText("Chicken not found")).toBeTruthy();

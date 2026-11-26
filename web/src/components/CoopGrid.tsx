@@ -30,6 +30,8 @@ export function CoopGrid({ total, sponsored, pending, columns }: { total: number
         {cells.map((c, i) =>
           c.kind === "lit" ? (
             <button key={c.id} type="button" className="cell cell-lit" style={{ animationDelay: `${Math.min(i, 120) * 6}ms` }} aria-label={`Open chicken ${bandId(c.id)}`} onClick={() => navigate(`/chicken/${c.id}`)} />
+          ) : c.kind === "dark" ? (
+            <button key={c.id} type="button" className="cell cell-dark" title={`${bandId(c.id)}, waiting for a sponsor`} style={{ animationDelay: `${Math.min(i, 120) * 6}ms` }} aria-label={`${bandId(c.id)}, waiting for a sponsor`} onClick={() => navigate(`/chicken/${c.id}`)} />
           ) : (
             <span key={c.id} className={`cell cell-${c.kind}`} style={{ animationDelay: `${Math.min(i, 120) * 6}ms` }} />
           ),

@@ -1,7 +1,24 @@
 import { BaseError, ChainMismatchError, ContractFunctionRevertedError, UserRejectedRequestError } from "viem";
 import { nativeSymbol, networkLabel } from "../config/chains";
 
-export type FriendlyError = { title: string; detail?: string; kind: "rejected" | "network" | "funds" | "contract" | "other" };
+export type FriendlyError = { title: string; detail?: string; kind: "rejected" | "network" | "funds" | "contract" | "wallet" | "other" };
+
+/**
+ * Text that is safe to show: first line only, cut before library footers ("Version: ...", "Docs: ...", "Details: ..."),
+ * and nothing that names a library package. Returns undefined when nothing readable is left.
+ */
+export function plain(text: string | undefined): string | undefined {
+  if (!text) return undefined;
+  const first = (text.split(/\n|Version:|Docs:|Details:|Request Arguments:/)[0] ?? "").trim();
+  if (!first || /@?wagmi|viem|@wagmi|\bat\s+\S+\s*\(|node_modules/i.test(first)) return undefined;
+  return first.length > 160 ? `${first.slice(0, 157)}...` : first;
+}
+
+const NO_WALLET: FriendlyError = {
+  kind: "wallet",
+  title: "No wallet found in this browser.",
+  detail: "Install a wallet extension, or open this page inside your wallet app's browser, then try again.",
+};
 
 const CONTRACT_MESSAGES: Record<string, string> = {
   DailyLimit: "You have reached today's egg limit. The quota resets at 00:00 UTC.",
@@ -23,6 +40,9 @@ const CONTRACT_MESSAGES: Record<string, string> = {
 
 /** Turns viem and wagmi errors into short sentences for the user. */
 export function friendlyError(error: unknown): FriendlyError {
+  if (error instanceof Error && (/ProviderNotFound|ConnectorNotFound/i.test(error.name) || /provider not found|connector not found/i.test(error.message))) {
+    return NO_WALLET;
+  }
   if (error instanceof BaseError) {
     if (error.walk((e) => e instanceof UserRejectedRequestError)) {
       return { kind: "rejected", title: "You cancelled the request in your wallet." };
@@ -47,10 +67,10 @@ export function friendlyError(error: unknown): FriendlyError {
     if (/user rejected|user denied|rejected the request/i.test(error.message)) {
       return { kind: "rejected", title: "You cancelled the request in your wallet." };
     }
-    return { kind: "other", title: "The transaction could not be sent.", detail: error.shortMessage };
+    return { kind: "other", title: "The transaction could not be sent.", detail: plain(error.shortMessage) };
   }
   if (error instanceof Error && /user rejected|user denied/i.test(error.message)) {
     return { kind: "rejected", title: "You cancelled the request in your wallet." };
   }
-  return { kind: "other", title: "Something went wrong.", detail: error instanceof Error ? error.message : undefined };
+  return { kind: "other", title: "Something went wrong.", detail: error instanceof Error ? plain(error.message) : undefined };
 }

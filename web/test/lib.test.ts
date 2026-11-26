@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { encodeAbiParameters, keccak256, UserRejectedRequestError, type Hex } from "viem";
 import { ageLabel, bandId, formatDuration, formatNative, parseBand, periodLabel } from "../src/lib/format";
-import { friendlyError } from "../src/lib/errors";
+import { ProviderNotFoundError } from "wagmi";
+import { friendlyError, plain } from "../src/lib/errors";
 import { MAX_NOTE_BYTES, noteBytes, recordHash } from "../src/lib/hash";
 import { decodeTokenUri, isImageDataUri } from "../src/lib/chickenArt";
 import { verifyHatch } from "../src/lib/verifyHatch";
@@ -87,5 +88,24 @@ describe("verify the draw", () => {
     const fb = keccak256(encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [7n, 100n]));
     const r = verifyHatch({ hatchId: 7n, revealBlock: 100n, usedFallback: true, poolSizeAtFinish: pool }, { seed: fb, index: BigInt(fb) % pool });
     expect(r.ok).toBe(true);
+  });
+});
+
+describe("user-facing error text", () => {
+  it("maps a missing wallet to a plain message with no library names", () => {
+    const e = friendlyError(new ProviderNotFoundError());
+    expect(e.kind).toBe("wallet");
+    expect(e.title).toBe("No wallet found in this browser.");
+    expect(JSON.stringify(e)).not.toMatch(/wagmi|viem|Version/i);
+  });
+
+  it("strips library footers and stacks from anything that could reach a toast", () => {
+    expect(plain("Provider not found.\n\nVersion: @wagmi/core@2.22.1")).toBe("Provider not found.");
+    expect(plain("Something failed. Version: viem@2.58.6")).toBe("Something failed.");
+    expect(plain("@wagmi/core said no")).toBeUndefined();
+    expect(plain("at foo (node_modules/x.js:1:1)")).toBeUndefined();
+    expect(plain(undefined)).toBeUndefined();
+    const raw = friendlyError(new Error("Boom\nVersion: @wagmi/core@2.22.1\n    at x (node_modules/y.js:1:1)"));
+    expect(raw.detail).toBe("Boom");
   });
 });

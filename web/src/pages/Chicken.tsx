@@ -8,11 +8,11 @@ import { CheckDraw } from "../components/CheckDraw";
 import { ActionButton } from "../components/Wallet";
 import { useToast } from "../components/Toast";
 import { deployment, EXPLORER, nativeSymbol, networkLabel, targetChain } from "../config/chains";
-import { useCareParams, useChicken, useHatch } from "../hooks/useChain";
+import { useBird, useCareParams, useChicken, useHatch } from "../hooks/useChain";
 import { useChainNow } from "../hooks/useChainNow";
 import { useTx } from "../hooks/useTx";
 import { decodeTokenUri, isImageDataUri } from "../lib/chickenArt";
-import { ageLabel, bandId, clockTime, formatDate, formatDuration, formatNative, periodLabel, plumageName, shortHex, speciesLabel } from "../lib/format";
+import { ageLabel, bandId, clockTime, formatDate, formatDuration, formatNative, periodLabel, plumageName, sexName, shortHex, speciesLabel } from "../lib/format";
 
 const PERIOD_CHOICES = [1, 3, 24];
 
@@ -25,6 +25,7 @@ export function ChickenPage() {
   const tx = useTx();
   const { careFee, carePeriod, maxPeriods } = useCareParams();
   const chicken = useChicken(id);
+  const waiting = useBird(chicken.isError ? id : undefined);
   const c = chicken.data;
   const hatchQ = useHatch(c && c.hatchId > 0n ? c.hatchId : undefined);
   const hatch = hatchQ.data?.[0]?.result;
@@ -66,14 +67,25 @@ export function ChickenPage() {
     );
   }
   if (chicken.isError) {
-    return (
-      <div className="stack narrow">
-        <BackLink />
-        <h1 className="h1">{bandId(id)}</h1>
-        <p className="muted">This bird has no sponsor yet. It is waiting in the coop for someone to hatch an egg.</p>
-        <Link to="/eggs" className="btn btn-primary">Get an egg</Link>
-      </div>
-    );
+    if (waiting.isLoading) {
+      return (
+        <div className="stack narrow">
+          <BackLink />
+          <p className="muted">Reading {bandId(id)} from the chain…</p>
+        </div>
+      );
+    }
+    if (!waiting.bird) {
+      return (
+        <div className="stack narrow">
+          <BackLink />
+          <h1 className="h1">Chicken not found</h1>
+          <p className="muted">No bird is registered with the band {bandId(id)}.</p>
+          <Link to="/" className="btn btn-primary">Back to the home page</Link>
+        </div>
+      );
+    }
+    return <WaitingBird id={id} bird={waiting.bird} now={now} />;
   }
   if (!c) {
     return (
@@ -206,5 +218,45 @@ function BackLink() {
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M11 3 L5 9 L11 15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
       My coop
     </Link>
+  );
+}
+
+/** A registered bird that nobody has hatched yet: its traits, its art, and the way to sponsor one. */
+function WaitingBird({ id, bird, now }: { id: bigint; bird: { breed: number; sex: number; plumage: number; bornAt: bigint | number }; now: number }) {
+  return (
+    <div className="stack">
+      <BackLink />
+      <div className="cols">
+        <div className="stack">
+          <div className="portrait">
+            <span className="portrait-thai" lang="th" aria-hidden="true">ไก่</span>
+            <BreedPortrait breed={bird.breed} sex={bird.sex} plumage={bird.plumage} tokenId={id} />
+            <span className="chip">Breed illustration</span>
+          </div>
+        </div>
+        <div className="stack">
+          <div className="split start">
+            <h1 className="h1">{speciesLabel(bird.breed, bird.sex)}</h1>
+            <span className="band mono">{bandId(id)}</span>
+          </div>
+          <p className="muted">Sample bird on testnet.</p>
+          <dl className="traits">
+            <div><dt>Plumage</dt><dd>{plumageName(bird.plumage)}</dd></div>
+            <div><dt>Age</dt><dd>{ageLabel(Number(bird.bornAt), now)}</dd></div>
+            <div><dt>Sex</dt><dd>{sexName(bird.sex)[0]!.toUpperCase() + sexName(bird.sex).slice(1)}</dd></div>
+          </dl>
+          <section className="card row nowrap onchain">
+            <div className="onchain-art">
+              <BirdGlyph breed={bird.breed} sex={bird.sex} plumage={bird.plumage} tokenId={id} width={84} label="This bird's own art, drawn from its traits" />
+            </div>
+            <div className="stack tight-gap">
+              <div className="strong">This bird has no sponsor yet</div>
+              <div className="muted small">It waits in the coop. When someone hatches an egg, one waiting bird is drawn at random and becomes theirs to care for.</div>
+            </div>
+          </section>
+          <Link to="/eggs" className="btn btn-primary btn-block">Get an egg</Link>
+        </div>
+      </div>
+    </div>
   );
 }
