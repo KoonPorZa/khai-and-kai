@@ -1,5 +1,5 @@
 import { BaseError, ChainMismatchError, ContractFunctionRevertedError, UserRejectedRequestError } from "viem";
-import { nativeSymbol } from "../config/chains";
+import { nativeSymbol, networkLabel } from "../config/chains";
 
 export type FriendlyError = { title: string; detail?: string; kind: "rejected" | "network" | "funds" | "contract" | "other" };
 
@@ -28,7 +28,7 @@ export function friendlyError(error: unknown): FriendlyError {
       return { kind: "rejected", title: "You cancelled the request in your wallet." };
     }
     if (error.walk((e) => e instanceof ChainMismatchError) || /does not match the target chain|chain mismatch/i.test(error.message)) {
-      return { kind: "network", title: "Your wallet is on the wrong network.", detail: "Switch to BNB testnet and try again." };
+      return { kind: "network", title: "Your wallet is on the wrong network.", detail: `Switch to ${networkLabel} and try again.` };
     }
     const revert = error.walk((e) => e instanceof ContractFunctionRevertedError);
     if (revert instanceof ContractFunctionRevertedError) {
@@ -41,7 +41,7 @@ export function friendlyError(error: unknown): FriendlyError {
       return {
         kind: "funds",
         title: `Not enough ${nativeSymbol} in this wallet.`,
-        detail: "Get test coins from the BNB testnet faucet, then try again.",
+        detail: `Get test coins from the ${networkLabel} faucet, then try again.`,
       };
     }
     if (/user rejected|user denied|rejected the request/i.test(error.message)) {

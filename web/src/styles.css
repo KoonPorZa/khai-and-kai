@@ -416,3 +416,8 @@ textarea { resize: vertical; }
 .portrait > .portrait-img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; }
 .portrait > .chip { z-index: 2; }
 @media (min-width: 900px) { .portrait:has(> .portrait-img) { height: auto; } }
+
+.hatch-bird { position: relative; display: inline-block; }
+.hatch-bird .chip-sm { position: absolute; left: 8px; top: 8px; right: auto; font-size: 11px; padding: 2px 8px; }
+.hatch-inset { position: absolute; right: -14px; bottom: -14px; padding: 3px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,.5); line-height: 0; }
+.hatch-inset .bird-glyph { border-radius: 10px; }

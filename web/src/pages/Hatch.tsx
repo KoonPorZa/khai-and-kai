@@ -3,10 +3,11 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAccount, useBlockNumber } from "wagmi";
 import { parseEventLogs } from "viem";
 import { kaiAbi } from "../abi/kai";
-import { BirdThumb, Check } from "../components/Art";
+import { BirdGlyph, BirdThumb, Check } from "../components/Art";
 import { HatchAnimation, type HatchPhase } from "../components/HatchAnimation";
 import { ActionButton } from "../components/Wallet";
 import { deployment, networkLabel, targetChain } from "../config/chains";
+import { artManifest } from "../lib/art";
 import { useChicken, useHatch } from "../hooks/useChain";
 import { useChainNow } from "../hooks/useChainNow";
 import { useTx } from "../hooks/useTx";
@@ -125,7 +126,19 @@ export function HatchPage() {
           onSettled={() => setSettled(true)}
           label={done ? "Your chicken has hatched" : "An egg about to hatch"}
         >
-          {bird ? <BirdThumb breed={bird.bird.breed} sex={bird.bird.sex} plumage={bird.bird.plumage} tokenId={bird.tokenId} width={200} label={speciesLabel(bird.bird.breed, bird.bird.sex)} /> : null}
+          {bird ? (
+            <div className="hatch-bird">
+              <BirdThumb breed={bird.bird.breed} sex={bird.bird.sex} plumage={bird.bird.plumage} tokenId={bird.tokenId} width={200} label={speciesLabel(bird.bird.breed, bird.bird.sex)} />
+              {artManifest.breeds[String(bird.bird.breed)] ? (
+                <>
+                  <span className="chip chip-sm">Breed illustration</span>
+                  <span className="hatch-inset">
+                    <BirdGlyph breed={bird.bird.breed} sex={bird.bird.sex} plumage={bird.bird.plumage} tokenId={bird.tokenId} width={72} label={`This bird's own art: ${plumageName(bird.bird.plumage).toLowerCase()} plumage`} />
+                  </span>
+                </>
+              ) : null}
+            </div>
+          ) : null}
         </HatchAnimation>
 
         {done ? (

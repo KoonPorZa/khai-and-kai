@@ -2,6 +2,7 @@
 // the compiled artifacts, seeds sample birds, then walks through the flows the web app performs, using the app's own ABIs
 // and lib functions (error messages, receipt parsing, draw check, hashing, art). No browser involved.
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
+import { createServer } from "node:net";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -33,7 +34,8 @@ import { bandId } from "../src/lib/format";
 import { sampleBirds } from "../../contracts/lib/sampleBirds";
 
 const CONTRACTS = join(__dirname, "..", "..", "contracts");
-const RPC = "http://127.0.0.1:8545";
+// A free port per run, so parallel agents never share a node. Set in beforeAll.
+let RPC = "";
 const CARE_PERIOD = 60n;
 const PRICE = parseEther("0.01");
 const CARE_FEE = parseEther("0.001");
@@ -41,7 +43,7 @@ const BIRDS = 120;
 
 let node: ChildProcess | undefined;
 let pub: PublicClient;
-const test = createTestClient({ chain: hardhat, mode: "hardhat", transport: http(RPC) });
+let test: ReturnType<typeof createTestClient>;
 let accounts: Address[] = [];
 let khai: Address;
 let kai: Address;
@@ -86,8 +88,20 @@ function artifact(name: string): { abi: Abi; bytecode: Hex } {
   return JSON.parse(readFileSync(dir, "utf8"));
 }
 
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = createServer();
+    srv.once("error", reject);
+    srv.listen(0, "127.0.0.1", () => {
+      const { port } = srv.address() as { port: number };
+      srv.close(() => resolve(port));
+    });
+  });
+}
+
 async function waitForRpc() {
   for (let i = 0; i < 120; i++) {
+    if (node?.exitCode !== null && node?.exitCode !== undefined) throw new Error("The local Hardhat node exited before it was ready.");
     try {
       if ((await rpc("eth_chainId")).result === "0x7a69") return;
     } catch {
@@ -102,7 +116,10 @@ beforeAll(async () => {
   if (!existsSync(join(CONTRACTS, "artifacts", "contracts", "Kai.sol", "Kai.json"))) {
     execFileSync("pnpm", ["--filter", "contracts", "build"], { cwd: CONTRACTS, stdio: "pipe" });
   }
-  node = spawn("pnpm", ["--filter", "contracts", "node"], { cwd: CONTRACTS, env: { ...process.env, ALLOW_LOCAL: "1" }, stdio: "ignore", detached: true });
+  const port = await freePort();
+  RPC = `http://127.0.0.1:${port}`;
+  test = createTestClient({ chain: hardhat, mode: "hardhat", transport: http(RPC) });
+  node = spawn("npx", ["hardhat", "node", "--hostname", "127.0.0.1", "--port", String(port)], { cwd: CONTRACTS, env: { ...process.env, ALLOW_LOCAL: "1" }, stdio: "ignore", detached: true });
   await waitForRpc();
   pub = createPublicClient({ chain: hardhat, transport: http(RPC) });
   accounts = ((await rpc("eth_accounts")).result as string[]).map((a) => getAddress(a));
