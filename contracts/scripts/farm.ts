@@ -7,6 +7,7 @@ import { contracts, requireAllowedChain, waitTx } from "./lib/common";
  *   FARM_CMD=withdraw TO=0x...                      (withdraws both Khai and Kai balances)
  *   FARM_CMD=setPrice VALUE=0.01                    (tBNB)
  *   FARM_CMD=setCareFee VALUE=0.001                 (tBNB)
+ *   FARM_CMD=setDailyLimit VALUE=3                  (eggs per wallet per UTC day)
  *   FARM_CMD=pause | unpause                        (both contracts)
  *   FARM_CMD=postCareProof TOKEN=12 KIND=0 NOTE="Morning feed" [CONTENT_HASH=0x...]
  *     KIND: 0 Feeding, 1 Health check, 2 Weight, 3 Vaccination, 4 Photo, 5 Note.
@@ -27,6 +28,7 @@ async function main() {
       const s = await kai.read.stats();
       console.log({
         price: formatEther(await khai.read.price()),
+        dailyLimit: (await khai.read.dailyLimit()).toString(),
         careFee: formatEther(await kai.read.careFee()),
         eggsAvailable: (await khai.read.eggsAvailable()).toString(),
         khaiPaused: await khai.read.paused(),
@@ -47,6 +49,13 @@ async function main() {
       await waitTx(await khai.write.setPrice([parseEther(need("VALUE"))]));
       console.log(`Egg price set to ${need("VALUE")} tBNB`);
       return;
+    case "setDailyLimit": {
+      const limit = BigInt(need("VALUE"));
+      if (limit < 1n || limit > 1000n) throw new Error("VALUE must be between 1 and 1000");
+      await waitTx(await khai.write.setDailyLimit([limit]));
+      console.log(`Daily limit set to ${limit} eggs per wallet`);
+      return;
+    }
     case "setCareFee":
       await waitTx(await kai.write.setCareFee([parseEther(need("VALUE"))]));
       console.log(`Care fee set to ${need("VALUE")} tBNB`);
