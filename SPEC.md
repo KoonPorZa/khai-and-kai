@@ -70,14 +70,14 @@ Stated limitation: a caller can see the block hash before finishing and could ch
 - Scripts: register birds, withdraw, set price, set care fee, pause.
 
 ### 4.6 Collect the bird (redeem)
-1. The token owner calls `Kai.requestRedeem(tokenId)`. Care must not be overdue. While a request is pending the token cannot be transferred. The owner can call `cancelRedeem(tokenId)`.
+1. The token owner calls `Kai.requestRedeem(tokenId)`. Care must not be overdue. While a request is pending the token cannot be transferred. The owner can call `cancelRedeem(tokenId)`, and the farm can refuse with `declineRedeem(tokenId)` (the request is cleared; the normal rules apply again).
 2. The farm hands the bird over and calls `Kai.confirmRedeem(tokenId, handoverHash)` (hash of the farm's handover record).
 3. The token stays with its owner as the bird's permanent record: status **Collected**. From then on there is no care fee, no overdue state, no new care proofs and no release; the token can be transferred freely, so the record travels with the bird. The bird never returns to the pool.
 4. The care clock keeps running while a request is pending. The farm may refuse by not confirming; that is an off-chain matter.
 
 ### 4.7 Return to the coop (release)
 1. When care has been overdue for more than 3 full care periods (`block.timestamp > carePaidUntil + 3 × carePeriod`), the farm may call `Kai.release(tokenId)`.
-2. The token is burned, any pending redeem request is cleared, and the bird goes back into the pool, so a new sponsor can hatch it. Its care proofs stay with the bird (they are keyed by bird id), so the next sponsor sees the full history.
+2. `release` reverts `RedeemPending` while a collection request is pending: the farm must confirm or decline it first, so release never wipes a request. The token is then burned and the bird goes back into the pool, so a new sponsor can hatch it. Its care proofs stay with the bird (they are keyed by bird id), so the next sponsor sees the full history.
 3. Paying care at any time before the farm calls `release` removes the risk. A collected bird cannot be released.
 
 ## 5. Architecture
@@ -175,16 +175,18 @@ uint256 constant RELEASE_AFTER_PERIODS = 3;
 function requestRedeem(uint256 tokenId);                 // owner; NotTokenOwner, CareOverdue, RedeemPending, AlreadyRedeemed
 function cancelRedeem(uint256 tokenId);                  // owner; NoRedeemRequest
 function confirmRedeem(uint256 tokenId, bytes32 handoverHash);   // FARM_ROLE; NoRedeemRequest
-function release(uint256 tokenId);                       // FARM_ROLE; NotReleasable, AlreadyRedeemed
+function declineRedeem(uint256 tokenId);                 // FARM_ROLE; NoRedeemRequest
+function release(uint256 tokenId);                       // FARM_ROLE; NotReleasable, AlreadyRedeemed, RedeemPending
 function releasableAt(uint256 tokenId) view returns (uint64);    // carePaidUntil + 3 × carePeriod; 0 if collected or no token
 function isReleasable(uint256 tokenId) view returns (bool);
 function pendingRedeems() view returns (uint256[] memory);       // token ids with a pending request
 // struct Chicken gains: uint64 redeemRequestedAt; uint64 redeemedAt;
-// struct Stats gains: uint256 collected; uint256 released;
+// struct Stats gains: uint256 collected; uint256 released; uint256 hatchCount;   (hatched = live tokens; hatchCount = hatches ever finished)
 // KaiRenderer.chickenURI gains a `uint64 redeemedAt` argument; the "Care status" attribute reads Paid, Overdue or Collected
 event RedeemRequested(uint256 indexed tokenId, address indexed owner);
 event RedeemCancelled(uint256 indexed tokenId, address indexed owner);
 event Redeemed(uint256 indexed tokenId, address indexed owner, bytes32 handoverHash);
+event RedeemDeclined(uint256 indexed tokenId, address indexed owner);
 event Released(uint256 indexed tokenId, address indexed previousOwner);
 // transfer while a redeem request is pending reverts RedeemPending(tokenId); payCare and postCareProof on a collected token revert AlreadyRedeemed(tokenId)
 

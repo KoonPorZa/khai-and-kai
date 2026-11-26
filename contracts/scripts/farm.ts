@@ -13,6 +13,7 @@ import { contracts, requireAllowedChain, waitTx } from "./lib/common";
  *     KIND: 0 Feeding, 1 Health check, 2 Weight, 3 Vaccination, 4 Photo, 5 Note.
  *     CONTENT_HASH defaults to keccak256 of NOTE.
  *   FARM_CMD=confirmRedeem TOKEN=12 [NOTE="Handed over to the sponsor"]   (hashes NOTE as the handover record)
+ *   FARM_CMD=declineRedeem TOKEN=12                 (refuses a pending collection request)
  *   FARM_CMD=release TOKEN=12                       (only when care has been overdue for more than 3 periods)
  */
 function need(name: string): string {
@@ -90,6 +91,12 @@ async function main() {
       const handoverHash = keccak256(toBytes(process.env.NOTE ?? `handover of Kai #${tokenId}`));
       await waitTx(await kai.write.confirmRedeem([tokenId, handoverHash]));
       console.log(`Handover confirmed for Kai #${tokenId} (record ${handoverHash})`);
+      return;
+    }
+    case "declineRedeem": {
+      const tokenId = BigInt(need("TOKEN"));
+      await waitTx(await kai.write.declineRedeem([tokenId]));
+      console.log(`Collection request for Kai #${tokenId} declined`);
       return;
     }
     case "release": {

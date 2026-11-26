@@ -135,7 +135,7 @@ describe("Khai & Kai", () => {
       expect(await sys.kai.read.poolSize()).to.equal(0n);
       expect(await sys.kai.read.totalSupply()).to.equal(3n);
       const s = await sys.kai.read.stats();
-      expect(s).to.deep.equal({ birdsRegistered: 3n, poolSize: 0n, hatched: 3n, pendingHatches: 0n, careProofs: 0n, collected: 0n, released: 0n });
+      expect(s).to.deep.equal({ birdsRegistered: 3n, poolSize: 0n, hatched: 3n, pendingHatches: 0n, careProofs: 0n, collected: 0n, released: 0n, hatchCount: 3n });
     });
   });
 
@@ -602,27 +602,45 @@ describe("Khai & Kai", () => {
       await expect(sys.kai.write.release([tokenId], { account: sys.farm.account })).to.be.rejectedWith("NotReleasable");
     });
 
-    it("I9 release burns the token, clears a pending request, returns the bird to the pool once, and I1 still holds", async () => {
+    it("I9 release burns the token and returns the bird to the pool once; a pending request blocks it until declined", async () => {
       const { sys, a, tokenId } = await hatched();
       await sys.kai.write.requestRedeem([tokenId], { account: a.account });
+      await time.increaseTo((await sys.kai.read.releasableAt([tokenId])) + 1n);
+      // A pending request is never wiped by release.
+      await expect(sys.kai.write.release([tokenId], { account: sys.farm.account })).to.be.rejectedWith("RedeemPending");
+      await expect(sys.kai.write.declineRedeem([tokenId], { account: a.account })).to.be.rejectedWith("AccessControl");
+      await sys.kai.write.declineRedeem([tokenId], { account: sys.farm.account });
+      await expect(sys.kai.write.declineRedeem([tokenId], { account: sys.farm.account })).to.be.rejectedWith("NoRedeemRequest");
+      expect(await sys.kai.read.pendingRedeems()).to.deep.equal([]);
+      // Overdue now, so the owner cannot ask again either.
+      await expect(sys.kai.write.requestRedeem([tokenId], { account: a.account })).to.be.rejectedWith("CareOverdue");
+
       const poolBefore = await sys.kai.read.poolSize();
       const availableBefore = await sys.khai.read.eggsAvailable();
-      await time.increaseTo((await sys.kai.read.releasableAt([tokenId])) + 1n);
       await sys.kai.write.release([tokenId], { account: sys.farm.account });
-
       await expect(sys.kai.read.ownerOf([tokenId])).to.be.rejected;
       expect(await sys.kai.read.balanceOf([addr(a)])).to.equal(0n);
       expect(await sys.kai.read.totalSupply()).to.equal(0n);
-      expect(await sys.kai.read.pendingRedeems()).to.deep.equal([]);
       expect(await sys.kai.read.poolSize()).to.equal(poolBefore + 1n);
       expect(await sys.khai.read.eggsAvailable()).to.equal(availableBefore + 1n);
       const s = await sys.kai.read.stats();
       expect(s.released).to.equal(1n);
       expect(s.hatched).to.equal(0n);
+      expect(s.hatchCount).to.equal(1n); // hatches ever finished does not drop after a release
       expect(await sys.kai.read.releasableAt([tokenId])).to.equal(0n);
       expect(await sys.kai.read.isReleasable([tokenId])).to.equal(false);
       await expect(sys.kai.write.release([tokenId], { account: sys.farm.account })).to.be.rejected;
       await assertI1(sys);
+      expect(await sys.kai.read.poolSize() + (await sys.kai.read.totalSupply())).to.equal(60n);
+    });
+
+    it("I9 a declined request is gone: the owner may ask again only while care is paid", async () => {
+      const { sys, a, tokenId } = await hatched();
+      await sys.kai.write.requestRedeem([tokenId], { account: a.account });
+      await sys.kai.write.declineRedeem([tokenId], { account: sys.farm.account });
+      expect((await sys.kai.read.chicken([tokenId])).redeemRequestedAt).to.equal(0n);
+      await sys.kai.write.requestRedeem([tokenId], { account: a.account });
+      expect(await sys.kai.read.pendingRedeems()).to.deep.equal([tokenId]);
     });
 
     it("I9 and I2: a released bird can be drawn again with the same token id, a fresh care period and the new hatch id; its history is kept", async () => {
@@ -669,6 +687,120 @@ describe("Khai & Kai", () => {
       await time.increaseTo((await sys.kai.read.releasableAt([t2])) + 1n);
       await sys.kai.write.release([t2], { account: sys.farm.account });
       expect(await sys.kai.read.poolSize()).to.equal(60n - 1n);
+    });
+  });
+
+
+  describe("redeem and release: review follow-ups", () => {
+    const conserved = async (sys: System, total: bigint) => {
+      expect((await sys.kai.read.poolSize()) + (await sys.kai.read.totalSupply())).to.equal(total);
+    };
+
+    it("release while another hatch is pending: I1 holds and the finish draws from the larger pool", async () => {
+      const sys = await loadFixture(smallPool);
+      const [a, b, c, d] = sys.users;
+      const first = await hatchAndFinish(sys, a);
+      await hatchAndFinish(sys, b);
+      await hatchAndFinish(sys, c);
+      await conserved(sys, 3n);
+      await time.increaseTo((await sys.kai.read.releasableAt([first.tokenId])) + 1n);
+      const pendingId = await buyAndHatch(sys, d).catch(() => undefined);
+      // The pool is empty, so the pending hatch cannot start until a bird is released.
+      expect(pendingId).to.equal(undefined);
+      await sys.kai.write.release([first.tokenId], { account: sys.farm.account });
+      await conserved(sys, 3n);
+      const hatchId = await buyAndHatch(sys, d);
+      await assertI1(sys);
+      // Release another bird between start and finish.
+      const second = (await sys.kai.read.chickensOf([addr(b)]))[0].tokenId;
+      await time.increaseTo((await sys.kai.read.releasableAt([second])) + 1n);
+      await sys.kai.write.release([second], { account: sys.farm.account });
+      await assertI1(sys);
+      expect(await sys.kai.read.poolSize()).to.equal(2n);
+      await mineToReveal(sys, hatchId);
+      await sys.kai.write.finishHatch([hatchId]);
+      const proof = await sys.kai.read.hatchProof([hatchId]);
+      expect(proof[1]).to.equal(2n); // drawn from the larger pool
+      await assertI1(sys);
+      await conserved(sys, 3n);
+    });
+
+    it("several pending requests: cancel, confirm and decline keep the set consistent when swap-remove moves an entry", async () => {
+      const sys = await loadFixture(bigPool);
+      const [a, b, c, d] = sys.users;
+      const owners = [a, b, c, d];
+      const tokens: bigint[] = [];
+      for (const u of owners) tokens.push((await hatchAndFinish(sys, u)).tokenId);
+      for (let i = 0; i < 4; i++) await sys.kai.write.requestRedeem([tokens[i]], { account: owners[i].account });
+      const sorted = async () => [...(await sys.kai.read.pendingRedeems())].sort((x, y) => Number(x - y));
+      const want = (ids: bigint[]) => [...ids].sort((x, y) => Number(x - y));
+      expect(await sorted()).to.deep.equal(want(tokens));
+      await sys.kai.write.cancelRedeem([tokens[0]], { account: a.account }); // first entry removed: the last moves into its slot
+      expect(await sorted()).to.deep.equal(want(tokens.slice(1)));
+      await sys.kai.write.confirmRedeem([tokens[1], keccak256("0x01")], { account: sys.farm.account });
+      expect(await sorted()).to.deep.equal(want(tokens.slice(2)));
+      await sys.kai.write.declineRedeem([tokens[2]], { account: sys.farm.account });
+      expect(await sorted()).to.deep.equal(want([tokens[3]]));
+      // The moved entry still works.
+      await sys.kai.write.cancelRedeem([tokens[3]], { account: d.account });
+      expect(await sys.kai.read.pendingRedeems()).to.deep.equal([]);
+      for (const i of [0, 2, 3]) expect((await sys.kai.read.chicken([tokens[i]])).redeemRequestedAt).to.equal(0n);
+      await conserved(sys, 60n);
+    });
+
+    it("a collected bird is never drawn again: confirm does not touch the pool and later hatches skip it", async () => {
+      const sys = await loadFixture(smallPool);
+      const [a, b, c] = sys.users;
+      const first = await hatchAndFinish(sys, a);
+      await sys.kai.write.requestRedeem([first.tokenId], { account: a.account });
+      const poolBefore = await sys.kai.read.poolSize();
+      await sys.kai.write.confirmRedeem([first.tokenId, keccak256("0x02")], { account: sys.farm.account });
+      expect(await sys.kai.read.poolSize()).to.equal(poolBefore);
+      const seen = [(await hatchAndFinish(sys, b)).tokenId, (await hatchAndFinish(sys, c)).tokenId];
+      expect(seen).to.not.include(first.tokenId);
+      expect(await sys.kai.read.poolSize()).to.equal(0n);
+      await conserved(sys, 3n);
+      expect((await sys.kai.read.stats()).collected).to.equal(1n);
+    });
+
+    it("request is allowed exactly at carePaidUntil, and confirm still works after care becomes overdue", async () => {
+      const sys = await loadFixture(bigPool);
+      const [a] = sys.users;
+      const { tokenId } = await hatchAndFinish(sys, a);
+      const until = (await sys.kai.read.chicken([tokenId])).carePaidUntil;
+      await time.setNextBlockTimestamp(until);
+      await sys.kai.write.requestRedeem([tokenId], { account: a.account }); // block.timestamp == carePaidUntil: not overdue yet
+      await time.increaseTo(until + 10n);
+      expect(await sys.kai.read.isOverdue([tokenId])).to.equal(true);
+      await sys.kai.write.confirmRedeem([tokenId, keccak256("0x03")], { account: sys.farm.account });
+      expect(await sys.kai.read.isOverdue([tokenId])).to.equal(false);
+      expect((await sys.kai.read.chicken([tokenId])).redeemedAt > 0n).to.equal(true);
+    });
+
+    it("poolSize + totalSupply == birdsRegistered after every step of a mixed sequence", async () => {
+      const sys = await loadFixture(smallPool);
+      const [a, b, c, d] = sys.users;
+      const total = 3n;
+      const check = () => conserved(sys, total);
+      await check();
+      const t1 = (await hatchAndFinish(sys, a)).tokenId;
+      await check();
+      const t2 = (await hatchAndFinish(sys, b)).tokenId;
+      await check();
+      await sys.kai.write.requestRedeem([t1], { account: a.account });
+      await check();
+      await sys.kai.write.confirmRedeem([t1, keccak256("0x04")], { account: sys.farm.account });
+      await check();
+      const t3 = (await hatchAndFinish(sys, c)).tokenId;
+      await check();
+      await time.increaseTo((await sys.kai.read.releasableAt([t2])) + 1n);
+      await sys.kai.write.release([t2], { account: sys.farm.account });
+      await check();
+      const again = (await hatchAndFinish(sys, d)).tokenId;
+      await check();
+      expect(again).to.equal(t2);
+      expect(new Set([t1, t3, again]).size).to.equal(3);
+      await assertI1(sys);
     });
   });
 

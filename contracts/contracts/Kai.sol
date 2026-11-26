@@ -68,6 +68,7 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
         uint256 careProofs;
         uint256 collected;
         uint256 released;
+        uint256 hatchCount; // hatches ever finished; unlike `hatched` (live tokens) it never drops after a release
     }
 
     /// @dev What the Verify button needs that the Hatch struct does not hold.
@@ -89,6 +90,7 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
     uint256 public totalCareProofs;
     uint256 public totalCollected;
     uint256 public totalReleased;
+    uint256 public totalFinished;
 
     mapping(uint256 => Bird) private _birds;
     uint32[] private _pool;
@@ -114,6 +116,7 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
     event RedeemRequested(uint256 indexed tokenId, address indexed owner);
     event RedeemCancelled(uint256 indexed tokenId, address indexed owner);
     event Redeemed(uint256 indexed tokenId, address indexed owner, bytes32 handoverHash);
+    event RedeemDeclined(uint256 indexed tokenId, address indexed owner);
     event Released(uint256 indexed tokenId, address indexed previousOwner);
 
     error WrongPayment();
@@ -256,6 +259,7 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
         h.usedFallback = usedFallback;
         _hatchSeeds[hatchId] = HatchSeed(seed, uint32(size), uint32(index));
         --pendingHatches;
+        ++totalFinished;
         _hatchOfToken[tokenId] = hatchId;
         _carePaidUntil[tokenId] = uint64(block.timestamp) + carePeriod;
 
@@ -338,13 +342,22 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
         emit Redeemed(tokenId, owner, handoverHash);
     }
 
-    /// @notice The farm returns a bird whose care has been overdue for more than RELEASE_AFTER_PERIODS periods to the pool.
+    /// @notice The farm refuses a pending collection request. Normal rules apply afterwards.
+    function declineRedeem(uint256 tokenId) external onlyRole(FARM_ROLE) {
+        address owner = _requireOwned(tokenId);
+        if (_redeemRequestedAt[tokenId] == 0) revert NoRedeemRequest(tokenId);
+        _clearRequest(tokenId);
+        emit RedeemDeclined(tokenId, owner);
+    }
+
+    /// @notice The farm returns a bird whose care has been overdue for more than RELEASE_AFTER_PERIODS periods to the pool. Reverts RedeemPending while a collection request is pending.
     /// The token is burned; the bird's care proofs stay with the bird id for the next sponsor.
     function release(uint256 tokenId) external onlyRole(FARM_ROLE) {
         address owner = _requireOwned(tokenId);
         if (_redeemedAt[tokenId] != 0) revert AlreadyRedeemed(tokenId);
         if (!isReleasable(tokenId)) revert NotReleasable(tokenId);
-        if (_redeemRequestedAt[tokenId] != 0) _clearRequest(tokenId);
+        // A pending request must be confirmed or declined first: release never wipes it.
+        if (_redeemRequestedAt[tokenId] != 0) revert RedeemPending(tokenId);
         delete _carePaidUntil[tokenId];
         delete _hatchOfToken[tokenId];
         _burn(tokenId);
@@ -446,7 +459,7 @@ contract Kai is ERC721Enumerable, AccessControl, Pausable, ReentrancyGuard {
     }
 
     function stats() external view returns (Stats memory) {
-        return Stats(birdsRegistered, _pool.length, totalSupply(), pendingHatches, totalCareProofs, totalCollected, totalReleased);
+        return Stats(birdsRegistered, _pool.length, totalSupply(), pendingHatches, totalCareProofs, totalCollected, totalReleased, totalFinished);
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
