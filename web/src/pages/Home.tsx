@@ -5,9 +5,11 @@ import { useCollectedIds, useSponsoredIds, useStats, useCareParams, useEggInfo }
 import { formatNative, formatNumber } from "../lib/format";
 import { nativeSymbol } from "../config/chains";
 import { artManifest } from "../lib/art";
+import { useT } from "../i18n";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 
 function Hero() {
+  const t = useT();
   return (
     <section className="hero">
       <div className="hero-thai" lang="th" aria-hidden="true">
@@ -17,19 +19,20 @@ function Hero() {
         </svg>
         <span className="accent">ไก่</span>
       </div>
-      <h1 className="display">Sponsor a real farm chicken, from egg to coop.</h1>
+      <h1 className="display">{t("home.title")}</h1>
       <p className="lede">
-        Khai means egg. Kai means chicken. Buy an egg, hatch it, and one registered bird becomes yours to care for. Every feeding and health check is posted on-chain.
+        {t("home.lede")}
       </p>
       <div className="row">
-        <Link to="/eggs" className="btn btn-primary btn-lg">Get an egg</Link>
-        <a href={GITHUB} target="_blank" rel="noreferrer" className="btn btn-ghost btn-lg desktop-only">Read the contracts</a>
+        <Link to="/eggs" className="btn btn-primary btn-lg">{t("home.getEgg")}</Link>
+        <a href={GITHUB} target="_blank" rel="noreferrer" className="btn btn-ghost btn-lg desktop-only">{t("home.readContracts")}</a>
       </div>
     </section>
   );
 }
 
 function CoopTonight() {
+  const t = useT();
   const stats = useStats();
   const s = stats.data;
   const total = s ? Number(s.birdsRegistered) : 0;
@@ -41,34 +44,36 @@ function CoopTonight() {
   return (
     <section className="card coop-card" aria-labelledby="coop-title">
       <div className="split">
-        <h2 id="coop-title" className="h2">The coop tonight</h2>
-        <span className="muted small">{s ? `${formatNumber(total)} birds registered` : deployment ? "Reading the contract…" : "Not deployed yet"}</span>
+        <h2 id="coop-title" className="h2">{t("home.coopTonight")}</h2>
+        <span className="muted small">{s ? t("home.birdsRegistered", { n: formatNumber(total) }) : deployment ? t("home.reading") : t("home.notDeployedShort")}</span>
       </div>
       {s && total > 0 ? (
         <CoopGrid total={total} sponsored={ids} pending={Number(s.pendingHatches)} columns={wide ? 25 : 20} collected={collectedIds} />
       ) : (
-        <div className="empty-grid">{deployment ? (stats.isLoading ? "Loading the coop…" : "No birds are registered yet.") : "The grid appears after the contracts are deployed."}</div>
+        <div className="empty-grid">{deployment ? (stats.isLoading ? t("home.loadingCoop") : t("home.noBirds")) : t("home.gridAfterDeploy")}</div>
       )}
       <p className="muted small">
-        Each window is one bird. It lights up when someone hatches its egg. Tap a lit window to open that chicken. Read straight from the contract
-        {s ? `, ${formatNumber(s.careProofs)} care records so far` : ""}{s ? `, ${formatNumber(s.hatchCount)} hatched so far` : ""}{collectedCount > 0 ? `, ${formatNumber(collectedCount)} ${collectedCount === 1 ? "bird" : "birds"} collected` : ""}.
+        {t("home.gridHelp")}
+        {s ? t("home.careRecords", { n: formatNumber(s.careProofs) }) : ""}{s ? t("home.hatchedSoFar", { n: formatNumber(s.hatchCount) }) : ""}{collectedCount > 0 ? t(collectedCount === 1 ? "home.collectedOne" : "home.collectedMany", { n: formatNumber(collectedCount) }) : ""}.
       </p>
     </section>
   );
 }
 
 function HowItWorks() {
+  const t = useT();
   const egg = useEggInfo();
   const care = useCareParams();
+  const feeText = care.careFee !== undefined ? ` (${formatNative(care.careFee)} ${nativeSymbol})` : "";
   const steps = [
-    ["Get an egg", `${egg.price !== undefined ? formatNative(egg.price) : "0.001"} ${nativeSymbol}. Up to ${egg.dailyLimit !== undefined ? String(egg.dailyLimit) : "20"} a day, and never more eggs than birds in the coop.`],
-    ["Hatch it", "A block hash picks your bird. No bird is drawn twice, and you can check the draw yourself."],
-    ["Keep it cared for", `Pay the care fee${care.careFee !== undefined ? ` (${formatNative(care.careFee)} ${nativeSymbol})` : ""} each period. The farm posts what it did. A chicken with unpaid care can't change hands.`],
-      ["Collect, pass on, or let go", "Collect the real bird from the farm and keep the token as its record, pass the token on to someone else, or stop paying: after a long lapse the farm may return the bird to the coop for a new sponsor."],
-] as const;
+    [t("home.step1Title"), t("home.step1Body", { price: egg.price !== undefined ? formatNative(egg.price) : "0.001", symbol: nativeSymbol, limit: egg.dailyLimit !== undefined ? String(egg.dailyLimit) : "20" })],
+    [t("home.step2Title"), t("home.step2Body")],
+    [t("home.step3Title"), t("home.step3Body", { fee: feeText })],
+    [t("home.step4Title"), t("home.step4Body")],
+  ] as const;
   return (
     <section className="how" aria-labelledby="how-title">
-      <h2 id="how-title" className="h2 h2-lg">How it works</h2>
+      <h2 id="how-title" className="h2 h2-lg">{t("home.how")}</h2>
       <ol className="steps">
         {steps.map(([title, text], i) => (
           <li key={title} className="step">

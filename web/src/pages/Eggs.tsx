@@ -8,6 +8,7 @@ import { deployment, nativeSymbol, FAUCET } from "../config/chains";
 import { khaiAbi } from "../abi/khai";
 import { useEggInfo } from "../hooks/useChain";
 import { useChainNow } from "../hooks/useChainNow";
+import { useT } from "../i18n";
 import { useTx } from "../hooks/useTx";
 import { clockTime, formatNative, nextQuotaReset } from "../lib/format";
 import { hatchIdFromReceipt } from "../lib/receipt";
@@ -18,6 +19,7 @@ const MAX_PIPS = 6;
 export function Eggs() {
   const navigate = useNavigate();
   const toast = useToast();
+  const t = useT();
   const { isConnected } = useAccount();
   const egg = useEggInfo();
   const now = useChainNow();
@@ -36,9 +38,9 @@ export function Eggs() {
   const deployed = !!deployment;
 
   let blocker: string | undefined;
-  if (deployed && egg.paused) blocker = "Sales are paused right now.";
-  else if (available === 0) blocker = "Every egg is spoken for. There are no birds left waiting in the coop.";
-  else if (isConnected && remaining === 0) blocker = `You have used all ${limit} eggs for today. The quota resets at ${resetAt}.`;
+  if (deployed && egg.paused) blocker = t("eggs.paused");
+  else if (available === 0) blocker = t("eggs.soldOut");
+  else if (isConnected && remaining === 0) blocker = t("eggs.limitReached", { limit, time: resetAt });
 
   const canAct = deployed && price !== undefined && !blocker;
 
@@ -49,7 +51,7 @@ export function Eggs() {
     const id = hatchIdFromReceipt(receipt);
     egg.refetch();
     if (id === undefined) {
-      toast("ok", "Hatch started.", "Open My coop to reveal your bird.");
+      toast("ok", t("eggs.toastHatchStarted"), t("eggs.toastOpenCoop"));
       navigate("/coop");
     } else navigate(`/hatch/${id}`, { state: { fresh: true } });
   };
@@ -59,15 +61,15 @@ export function Eggs() {
     const receipt = await keepTx.run({ address: deployment.khai, abi: khaiAbi, functionName: "buy", args: [BigInt(q)], value: price * BigInt(q) });
     if (!receipt) return;
     egg.refetch();
-    toast("ok", `${q} ${q === 1 ? "egg" : "eggs"} added to your coop.`);
+    toast("ok", t(q === 1 ? "eggs.toastAddedOne" : "eggs.toastAddedMany", { n: q }));
     navigate("/coop");
   };
 
   return (
     <div className="stack">
       <header className="page-head">
-        <h1 className="h1">Get an egg</h1>
-        <p className="muted">One egg hatches into one bird from the coop. You find out which when it hatches.</p>
+        <h1 className="h1">{t("eggs.title")}</h1>
+        <p className="muted">{t("eggs.lede")}</p>
       </header>
 
       <div className="eggs-grid">
@@ -79,32 +81,32 @@ export function Eggs() {
             </div>
             <div className="price">
               <span className="price-num">{price !== undefined ? formatNative(price) : "0.001"}</span>
-              <span className="muted">{nativeSymbol} each</span>
+              <span className="muted">{t("eggs.each", { symbol: nativeSymbol })}</span>
             </div>
           </section>
           <div className="two">
             <div className="card tight">
-              <div className="muted small">Eggs left</div>
+              <div className="muted small">{t("eggs.left")}</div>
               <div className="stat">{available !== undefined ? available : "…"}</div>
-              <div className="muted tiny">one per bird waiting</div>
+              <div className="muted tiny">{t("eggs.leftNote")}</div>
             </div>
             <div className="card tight">
-              <div className="muted small">{limit > MAX_PIPS ? "You can still buy today" : "Your eggs today"}</div>
+              <div className="muted small">{limit > MAX_PIPS ? t("eggs.canStill") : t("eggs.today")}</div>
               {limit > MAX_PIPS ? (
                 <>
                   <div className="stat">{isConnected ? Math.max(limit - bought, 0) : limit}</div>
-                  <div className="quota-bar" role="img" aria-label={isConnected ? `${bought} of ${limit} used` : "Connect a wallet to see your quota"}>
+                  <div className="quota-bar" role="img" aria-label={isConnected ? t("eggs.quotaUsedAria", { used: bought, limit }) : t("eggs.quotaConnect")}>
                     <span style={{ width: `${isConnected ? Math.min((bought / limit) * 100, 100) : 0}%` }} />
                   </div>
                 </>
               ) : (
-                <div className="pips" role="img" aria-label={isConnected ? `${bought} of ${limit} used` : "Connect a wallet to see your quota"}>
+                <div className="pips" role="img" aria-label={isConnected ? t("eggs.quotaUsedAria", { used: bought, limit }) : t("eggs.quotaConnect")}>
                   {Array.from({ length: limit }, (_, i) => (
                     <span key={i} className={`pip ${i < bought ? "pip-used" : ""}`} />
                   ))}
                 </div>
               )}
-              <div className="muted tiny">{isConnected ? `${bought} of ${limit} used, resets ${resetAt}` : `Up to ${limit} a day`}</div>
+              <div className="muted tiny">{isConnected ? t("eggs.quotaUsed", { used: bought, limit, time: resetAt }) : t("eggs.quotaUpTo", { limit })}</div>
             </div>
           </div>
         </div>
@@ -113,17 +115,17 @@ export function Eggs() {
           {blocker ? <p className="notice" role="status">{blocker}</p> : null}
           <div className="stack tight-gap">
             <ActionButton className="btn-xl" onClick={buyAndHatch} disabled={!canAct} busy={hatchTx.busy}>
-              {hatchTx.state.status === "wallet" ? "Confirm in your wallet…" : hatchTx.state.status === "pending" ? "Starting the hatch…" : "Buy and hatch now"}
+              {hatchTx.state.status === "wallet" ? t("common.confirmWallet") : hatchTx.state.status === "pending" ? t("eggs.starting") : t("eggs.buyHatch")}
             </ActionButton>
-            <p className="muted small center">Two wallet confirmations: one to buy and start, one to reveal your bird.</p>
+            <p className="muted small center">{t("eggs.twoConfirm")}</p>
           </div>
 
           <section className="card outline">
-            <div className="strong">Or keep eggs for later</div>
+            <div className="strong">{t("eggs.keepTitle")}</div>
             <div className="row nowrap">
-              <label htmlFor="qty" className="muted small">Quantity</label>
+              <label htmlFor="qty" className="muted small">{t("eggs.quantity")}</label>
               <div className="stepper">
-                <button type="button" aria-label="One fewer" onClick={() => setQty(Math.max(1, q - 1))} disabled={q <= 1}>&minus;</button>
+                <button type="button" aria-label={t("eggs.fewer")} onClick={() => setQty(Math.max(1, q - 1))} disabled={q <= 1}>&minus;</button>
                 <input
                   id="qty"
                   value={q}
@@ -133,17 +135,17 @@ export function Eggs() {
                     setQty(Number.isFinite(n) ? n : 1);
                   }}
                 />
-                <button type="button" aria-label="One more" onClick={() => setQty(Math.min(Math.max(1, maxQty), q + 1))} disabled={q >= maxQty}>+</button>
+                <button type="button" aria-label={t("eggs.more")} onClick={() => setQty(Math.min(Math.max(1, maxQty), q + 1))} disabled={q >= maxQty}>+</button>
               </div>
               <span className="mono total">{price !== undefined ? `${formatNative(price * BigInt(q))} ${nativeSymbol}` : "—"}</span>
             </div>
             <ActionButton variant="outline" onClick={buyToKeep} disabled={!canAct || maxQty < 1} busy={keepTx.busy}>
-              {keepTx.state.status === "wallet" ? "Confirm in your wallet…" : keepTx.state.status === "pending" ? "Buying…" : `Buy ${q} ${q === 1 ? "egg" : "eggs"}`}
+              {keepTx.state.status === "wallet" ? t("common.confirmWallet") : keepTx.state.status === "pending" ? t("eggs.buying") : t(q === 1 ? "eggs.buyOne" : "eggs.buyMany", { n: q })}
             </ActionButton>
-            <p className="muted small">Eggs sit in your coop until you hatch them. You can also send one to a friend.</p>
+            <p className="muted small">{t("eggs.keepNote")}</p>
           </section>
           <p className="muted small">
-            Need test coins? Get {nativeSymbol} from the <a href={FAUCET} target="_blank" rel="noreferrer">BNB testnet faucet</a>.
+            {t("eggs.faucetBefore", { symbol: nativeSymbol })}<a href={FAUCET} target="_blank" rel="noreferrer">{t("wallet.faucetLink")}</a>{t("wallet.faucetAfter")}
           </p>
         </div>
       </div>

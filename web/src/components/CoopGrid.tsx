@@ -1,10 +1,12 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useT } from "../i18n";
 import { bandId } from "../lib/format";
 
 /** One cell per registered bird. Lit = sponsored (opens the chicken), violet = hatching, dark = waiting. */
 export function CoopGrid({ total, sponsored, pending, columns, collected }: { total: number; sponsored: Set<number>; pending: number; columns: number; collected?: Set<number> }) {
   const navigate = useNavigate();
+  const t = useT();
   const cells = useMemo(() => {
     let violet = pending;
     return Array.from({ length: total }, (_, i) => {
@@ -26,23 +28,23 @@ export function CoopGrid({ total, sponsored, pending, columns, collected }: { to
         className="grid-cells"
         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
         role="group"
-        aria-label={`Grid of ${total} nest boxes. ${lit} are lit, meaning sponsored. ${done} are collected. ${pending} are hatching. ${waiting} are dark, waiting for a sponsor.`}
+        aria-label={t("coop.gridAria", { total, lit, done, pending, waiting })}
       >
         {cells.map((c, i) =>
           c.kind === "lit" || c.kind === "collected" ? (
-            <button key={c.id} type="button" className={`cell cell-${c.kind}`} style={{ animationDelay: `${Math.min(i, 120) * 6}ms` }} aria-label={`Open chicken ${bandId(c.id)}${c.kind === "collected" ? ", collected" : ""}`} onClick={() => navigate(`/chicken/${c.id}`)} />
+            <button key={c.id} type="button" className={`cell cell-${c.kind}`} style={{ animationDelay: `${Math.min(i, 120) * 6}ms` }} aria-label={t(c.kind === "collected" ? "coop.cellOpenCollected" : "coop.cellOpen", { band: bandId(c.id) })} onClick={() => navigate(`/chicken/${c.id}`)} />
           ) : c.kind === "dark" ? (
-            <button key={c.id} type="button" className="cell cell-dark" title={`${bandId(c.id)}, waiting for a sponsor`} style={{ animationDelay: `${Math.min(i, 120) * 6}ms` }} aria-label={`${bandId(c.id)}, waiting for a sponsor`} onClick={() => navigate(`/chicken/${c.id}`)} />
+            <button key={c.id} type="button" className="cell cell-dark" title={t("coop.cellWaiting", { band: bandId(c.id) })} style={{ animationDelay: `${Math.min(i, 120) * 6}ms` }} aria-label={t("coop.cellWaiting", { band: bandId(c.id) })} onClick={() => navigate(`/chicken/${c.id}`)} />
           ) : (
             <span key={c.id} className={`cell cell-${c.kind}`} style={{ animationDelay: `${Math.min(i, 120) * 6}ms` }} />
           ),
         )}
       </div>
       <div className="legend">
-        <span><i className="swatch swatch-lit" />{lit} sponsored</span>
-        {done > 0 ? <span><i className="swatch swatch-collected" />{done} collected</span> : null}
-        <span><i className="swatch swatch-hatch" />{pending} hatching now</span>
-        <span><i className="swatch swatch-dark" />{waiting} waiting</span>
+        <span><i className="swatch swatch-lit" />{t("coop.legendSponsored", { n: lit })}</span>
+        {done > 0 ? <span><i className="swatch swatch-collected" />{t("coop.legendCollected", { n: done })}</span> : null}
+        <span><i className="swatch swatch-hatch" />{t("coop.legendHatching", { n: pending })}</span>
+        <span><i className="swatch swatch-dark" />{t("coop.legendWaiting", { n: waiting })}</span>
       </div>
     </>
   );

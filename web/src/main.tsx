@@ -18,6 +18,7 @@ import { autoConnectLocal } from "./config/localWallet";
 import { ToastProvider } from "./components/Toast";
 import { WalletProvider } from "./components/Wallet";
 import { App } from "./App";
+import { LangProvider } from "./i18n";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 2000, retry: 1, refetchOnWindowFocus: false } } });
 
@@ -27,13 +28,15 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>
+        <LangProvider>
+          <ToastProvider>
           <WalletProvider>
             <BrowserRouter>
               <App />
             </BrowserRouter>
           </WalletProvider>
         </ToastProvider>
+        </LangProvider>
       </QueryClientProvider>
     </WagmiProvider>
   </StrictMode>,

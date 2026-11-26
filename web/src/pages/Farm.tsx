@@ -6,14 +6,16 @@ import { Check } from "../components/Art";
 import { ActionButton, useConnectModal } from "../components/Wallet";
 import { CollectionRequests, OverdueBirds } from "../components/FarmQueues";
 import { deployment } from "../config/chains";
+import { useT } from "../i18n";
 import { useChicken, useFarmRole } from "../hooks/useChain";
 import { useTx } from "../hooks/useTx";
 import { MAX_NOTE_BYTES, noteBytes, recordHash } from "../lib/hash";
-import { bandId, parseBand, PROOF_KINDS, shortHex, speciesLabel } from "../lib/format";
+import { bandId, parseBand, PROOF_KINDS, kindName, shortHex, speciesLabel } from "../lib/format";
 
 export function Farm() {
   const { isConnected } = useAccount();
   const modal = useConnectModal();
+  const t = useT();
   const { isFarm, isLoading } = useFarmRole();
   const tx = useTx();
   const [band, setBand] = useState("");
@@ -31,19 +33,19 @@ export function Farm() {
   if (!isConnected) {
     return (
       <div className="stack narrow">
-        <h1 className="h1">Post a care record</h1>
-        <p className="muted">Connect the farm wallet to post records.</p>
-        <button type="button" className="btn btn-primary" onClick={modal.open}>Connect wallet</button>
+        <h1 className="h1">{t('farm.title')}</h1>
+        <p className="muted">{t('farm.connectPrompt')}</p>
+        <button type="button" className="btn btn-primary" onClick={modal.open}>{t('farm.connect')}</button>
       </div>
     );
   }
-  if (isLoading) return <p className="muted">Checking this wallet's role…</p>;
+  if (isLoading) return <p className="muted">{t('farm.checkingRole')}</p>;
   if (!isFarm) {
     return (
       <div className="stack narrow">
-        <h1 className="h1">Post a care record</h1>
-        <p className="notice">This page is for the farm account.</p>
-        <Link to="/" className="btn btn-ghost">Back to the home page</Link>
+        <h1 className="h1">{t('farm.title')}</h1>
+        <p className="notice">{t('farm.notFarm')}</p>
+        <Link to="/" className="btn btn-ghost">{t('farm.backHome')}</Link>
       </div>
     );
   }
@@ -66,55 +68,55 @@ export function Farm() {
   return (
     <div className="stack farm">
       <header className="page-head">
-        <h1 className="h1">Post a care record</h1>
-        <p className="muted">Sponsors see this on their chicken's page as soon as the transaction confirms.</p>
+        <h1 className="h1">{t('farm.title')}</h1>
+        <p className="muted">{t('farm.intro')}</p>
       </header>
       <form className="card stack" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         <div className="field">
-          <label htmlFor="band">Bird</label>
+          <label htmlFor="band">{t('farm.bird')}</label>
           <input id="band" value={band} placeholder="KK-0042" autoComplete="off" onChange={(e) => { setBand(e.target.value); setPosted(undefined); }} />
           <span className="muted small">
-            {band.trim() === "" ? "Enter the leg-band id of a sponsored bird."
-              : tokenId === undefined ? "That is not a band id. Use the form KK-0042."
-              : chicken.data ? `${speciesLabel(chicken.data.bird.breed, chicken.data.bird.sex)}, sponsored by ${shortHex(chicken.data.owner)}`
-              : chicken.isError ? `${bandId(tokenId)} has no sponsor yet.` : "Looking up…"}
+            {band.trim() === "" ? t('farm.enterBand')
+              : tokenId === undefined ? t('farm.badBand')
+              : chicken.data ? t('farm.birdInfo', { species: speciesLabel(chicken.data.bird.breed, chicken.data.bird.sex), who: shortHex(chicken.data.owner) })
+              : chicken.isError ? t('farm.noSponsor', { band: bandId(tokenId) }) : t('farm.lookingUp')}
           </span>
         </div>
 
         <fieldset className="field">
-          <legend>What was done</legend>
+          <legend>{t('farm.whatDone')}</legend>
           <div className="chips">
             {PROOF_KINDS.map((k, i) => (
-              <button key={k} type="button" className="chip-btn" aria-pressed={kind === i} onClick={() => setKind(i)}>{k}</button>
+              <button key={k} type="button" className="chip-btn" aria-pressed={kind === i} onClick={() => setKind(i)}>{kindName(i)}</button>
             ))}
           </div>
         </fieldset>
 
         <div className="field">
           <div className="split end">
-            <label htmlFor="note">Note for the sponsor</label>
-            <span className={`small ${bytes > MAX_NOTE_BYTES ? "bad-text" : "muted"}`}>{bytes} of {MAX_NOTE_BYTES}</span>
+            <label htmlFor="note">{t('farm.noteLabel')}</label>
+            <span className={`small ${bytes > MAX_NOTE_BYTES ? "bad-text" : "muted"}`}>{t('farm.noteCount', { n: bytes, max: MAX_NOTE_BYTES })}</span>
           </div>
           <textarea id="note" rows={3} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={bytes > MAX_NOTE_BYTES} />
-          {bytes > MAX_NOTE_BYTES ? <span className="bad-text small">The note is limited to {MAX_NOTE_BYTES} bytes.</span> : null}
+          {bytes > MAX_NOTE_BYTES ? <span className="bad-text small">{t('farm.noteLimit', { max: MAX_NOTE_BYTES })}</span> : null}
         </div>
 
         <div className="field">
-          <label htmlFor="rec">Farm record to fingerprint</label>
+          <label htmlFor="rec">{t('farm.recordLabel')}</label>
           <textarea id="rec" rows={3} value={record} onChange={(e) => setRecord(e.target.value)} />
-          <span className="muted small">Only a fingerprint of this text goes on-chain, so the paper record can be checked against it later. Do not type names or contact details. The fingerprint of this text is public.</span>
+          <span className="muted small">{t('farm.recordHelp')}</span>
           <span className="mono small hash">{hash}</span>
         </div>
 
         <ActionButton type="submit" className="btn-block" disabled={!sendable} busy={tx.busy}>
-          {tx.state.status === "wallet" ? "Confirm in your wallet…" : tx.state.status === "pending" ? "Posting…" : "Post care record"}
+          {tx.state.status === "wallet" ? t('farm.confirmWallet') : tx.state.status === "pending" ? t('farm.posting') : t('farm.post')}
         </ActionButton>
       </form>
 
       {posted !== undefined ? (
         <p className="card row nowrap ok-text" role="status">
           <Check size={18} />
-          <span>Care record posted for {bandId(posted)}. <Link to={`/chicken/${posted}`}>See it on the chicken's page</Link></span>
+          <span>{t('farm.posted', { band: bandId(posted) })} <Link to={`/chicken/${posted}`}>{t('farm.seeIt')}</Link></span>
         </p>
       ) : null}
 

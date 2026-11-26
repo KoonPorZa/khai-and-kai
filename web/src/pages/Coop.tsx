@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useAccount, useBalance, useBlockNumber, useReadContract, useReadContracts } from "wagmi";
+import { useT } from "../i18n";
 import { BirdThumb, EggSvg, Warn } from "../components/Art";
 import { ActionButton, useConnectModal } from "../components/Wallet";
 import { kaiAbi } from "../abi/kai";
@@ -15,6 +16,7 @@ import { hatchIdFromReceipt } from "../lib/receipt";
 const chainId = targetChain.id;
 
 export function Coop() {
+  const t = useT();
   const { address, isConnected } = useAccount();
   const modal = useConnectModal();
   const navigate = useNavigate();
@@ -74,9 +76,9 @@ export function Coop() {
   if (!isConnected) {
     return (
       <div className="stack narrow">
-        <h1 className="h1">My coop</h1>
-        <p className="muted">Connect a wallet to see your eggs, hatches and chickens.</p>
-        <button type="button" className="btn btn-primary" onClick={modal.open}>Connect wallet</button>
+        <h1 className="h1">{t("coop.title")}</h1>
+        <p className="muted">{t("coop.connectPrompt")}</p>
+        <button type="button" className="btn btn-primary" onClick={modal.open}>{t("coop.connect")}</button>
       </div>
     );
   }
@@ -84,7 +86,7 @@ export function Coop() {
   return (
     <div className="stack">
       <header className="split end">
-        <h1 className="h1">My coop</h1>
+        <h1 className="h1">{t("coop.title")}</h1>
         <span className="mono muted small">{balance.data ? `${formatNative(balance.data.value)} ${nativeSymbol}` : ""}</span>
       </header>
 
@@ -94,27 +96,27 @@ export function Coop() {
           <div key={String(id)} className="card hatch-banner">
             <EggSvg width={30} cracked label="" />
             <div className="grow">
-              <div className="strong">{ready ? `Hatch #${id} is ready to reveal` : `Hatch #${id} is warming up`}</div>
-              <div className="muted small">{ready ? "Anyone can finish it. It takes one confirmation." : `Reveal block ${hatch ? formatNumber(hatch.revealBlock) : ""}`}</div>
+              <div className="strong">{t(ready ? "coop.hatchReady" : "coop.hatchWarming", { id: String(id) })}</div>
+              <div className="muted small">{ready ? t("coop.hatchReadyNote") : t("coop.revealBlock", { block: hatch ? formatNumber(hatch.revealBlock) : "" })}</div>
             </div>
-            <Link to={`/hatch/${id}`} className="btn btn-violet">{ready ? "Reveal" : "Open"}</Link>
+            <Link to={`/hatch/${id}`} className="btn btn-violet">{ready ? t("coop.reveal") : t("coop.open")}</Link>
           </div>
         );
       })}
 
       {eggCount > 0 ? (
         <section className="stack tight-gap">
-          <h2 className="h2">Eggs</h2>
+          <h2 className="h2">{t("coop.eggs")}</h2>
           <div className="card row nowrap">
             <div className="egg-row" aria-hidden="true">
               {Array.from({ length: Math.min(eggCount, 4) }, (_, i) => <EggSvg key={i} width={26} label="" />)}
             </div>
             <div className="grow">
-              <div className="strong">{eggCount} {eggCount === 1 ? "egg" : "eggs"} waiting</div>
-              <div className="muted small">Each hatches into one bird</div>
+              <div className="strong">{eggCount === 1 ? t("coop.eggWaitingOne") : t("coop.eggWaitingMany", { n: eggCount })}</div>
+              <div className="muted small">{t("coop.eachOne")}</div>
             </div>
             <ActionButton variant="primary" onClick={hatchOne} busy={startTx.busy}>
-              {startTx.busy ? "Starting…" : "Hatch one"}
+              {startTx.busy ? t("coop.starting") : t("coop.hatchOne")}
             </ActionButton>
           </div>
         </section>
@@ -123,8 +125,8 @@ export function Coop() {
       {list.length > 0 ? (
         <section className="stack tight-gap">
           <div className="split end">
-            <h2 className="h2">Chickens</h2>
-            <span className="muted small">{list.length} sponsored{overdueCount ? `, ${overdueCount} needs care` : ""}</span>
+            <h2 className="h2">{t("coop.chickens")}</h2>
+            <span className="muted small">{t("coop.sponsored", { n: list.length })}{overdueCount ? t("coop.needsCare", { n: overdueCount }) : ""}</span>
           </div>
           <div className="chicken-list">
             {list.map((c) => {
@@ -140,7 +142,7 @@ export function Coop() {
                     <span className="mono muted small">{bandId(c.tokenId)}</span>
                     <span className={`status ${overdue ? "status-bad" : requested ? "status-violet" : "status-ok"}`}>
                       {overdue ? <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1 L11.5 11 H0.5 Z" fill="currentColor" /></svg> : <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="currentColor" /></svg>}
-                      {collected ? "Collected" : requested ? "Collection requested" : overdue ? `Care overdue ${formatDuration(-left)}` : `Care paid, ${formatDuration(left)} left`}
+                      {collected ? t("coop.collected") : requested ? t("coop.requested") : overdue ? t("coop.overdue", { duration: formatDuration(-left) }) : t("coop.paid", { duration: formatDuration(left) })}
                     </span>
                   </span>
                 </Link>
@@ -150,18 +152,18 @@ export function Coop() {
         </section>
       ) : null}
 
-      {loading ? <p className="muted">Reading your coop from the chain…</p> : null}
+      {loading ? <p className="muted">{t("coop.reading")}</p> : null}
 
       {empty ? (
         <section className="card empty">
           {artManifest.emptyCoop ? <img className="empty-art" src={artManifest.emptyCoop} width={800} height={600} alt="" aria-hidden="true" loading="lazy" decoding="async" /> : <EggSvg width={56} />}
-          <div className="strong">Your coop is empty</div>
-          <p className="muted">Hatch your first egg to sponsor a bird. It takes two confirmations and about ten seconds.</p>
-          <Link to="/eggs" className="btn btn-primary">Get an egg</Link>
+          <div className="strong">{t("coop.emptyTitle")}</div>
+          <p className="muted">{t("coop.emptyBody")}</p>
+          <Link to="/eggs" className="btn btn-primary">{t("coop.getEgg")}</Link>
         </section>
       ) : null}
       {overdueCount > 0 ? (
-        <p className="notice row nowrap"><Warn size={18} /> A chicken with unpaid care can't be transferred. Open it to pay.</p>
+        <p className="notice row nowrap"><Warn size={18} /> {t("coop.noTransfer")}</p>
       ) : null}
     </div>
   );

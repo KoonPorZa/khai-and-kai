@@ -1,4 +1,6 @@
 import { formatEther } from "viem";
+import { tNow } from "../i18n";
+import type { Key } from "../i18n/en";
 
 export const BREEDS = ["Silkie", "Brahma", "Serama", "Polish", "Cochin", "Sebright", "Orpington", "Wyandotte", "Leghorn", "Sussex"] as const;
 export const SEXES = ["hen", "rooster"] as const;
@@ -6,9 +8,9 @@ export const PLUMAGES = ["White", "Black", "Buff", "Blue", "Splash", "Partridge"
 export const PROOF_KINDS = ["Feeding", "Health check", "Weight", "Vaccination", "Photo", "Note"] as const;
 
 export const breedName = (b: number) => BREEDS[b] ?? "Unknown breed";
-export const plumageName = (p: number) => PLUMAGES[p] ?? "Unknown";
-export const sexName = (s: number) => SEXES[s] ?? "hen";
-export const kindName = (k: number) => PROOF_KINDS[k] ?? "Note";
+export const plumageName = (p: number) => (PLUMAGES[p] ? tNow(`plumage.${p}` as Key) : tNow("plumage.unknown"));
+export const sexName = (s: number) => tNow(SEXES[s] === "rooster" ? "sex.rooster" : "sex.hen");
+export const kindName = (k: number) => tNow(`kind.${PROOF_KINDS[k] ? k : 5}` as Key);
 export const speciesLabel = (b: number, s: number) => `${breedName(b)} ${sexName(s)}`;
 
 /** KK-0042 */
@@ -36,26 +38,25 @@ export function formatNative(wei: bigint, max = 4): string {
 
 export function formatDuration(totalSeconds: number): string {
   const s = Math.max(0, Math.round(totalSeconds));
-  if (s < 60) return `${s} s`;
+  if (s < 60) return tNow("dur.s", { n: s });
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
-  const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
-  if (d > 0) return h > 0 ? `${plural(d, "day")} ${h} h` : plural(d, "day");
-  if (h > 0) return m > 0 ? `${h} h ${m} min` : plural(h, "hour");
-  return plural(m, "minute");
+  const days = (n: number) => tNow(n === 1 ? "dur.dayOne" : "dur.dayMany", { n });
+  if (d > 0) return h > 0 ? `${days(d)} ${tNow("dur.h", { n: h })}` : days(d);
+  if (h > 0) return m > 0 ? tNow("dur.hm", { h, m }) : tNow(h === 1 ? "dur.hourOne" : "dur.hourMany", { n: h });
+  return tNow(m === 1 ? "dur.minOne" : "dur.minMany", { n: m });
 }
 
 export function periodLabel(periods: number, carePeriodSeconds: number): string {
-  const total = formatDuration(periods * carePeriodSeconds);
-  return `${periods} ${periods === 1 ? "period" : "periods"} (${total})`;
+  return tNow(periods === 1 ? "dur.period" : "dur.periods", { n: periods, total: formatDuration(periods * carePeriodSeconds) });
 }
 
 export function ageLabel(bornAt: number, nowSeconds: number): string {
   const days = Math.max(0, Math.floor((nowSeconds - bornAt) / 86400));
-  if (days < 30) return `${days} ${days === 1 ? "day" : "days"}`;
+  if (days < 30) return tNow(days === 1 ? "age.dayOne" : "age.dayMany", { n: days });
   const months = Math.floor(days / 30.44);
-  return `${months} ${months === 1 ? "month" : "months"}`;
+  return tNow(months === 1 ? "age.monthOne" : "age.monthMany", { n: months });
 }
 
 export const formatDate = (seconds: number) =>
@@ -66,8 +67,8 @@ export function formatWhen(seconds: number, nowSeconds: number): string {
   const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   const today = new Date(nowSeconds * 1000).toDateString();
   const yesterday = new Date((nowSeconds - 86400) * 1000).toDateString();
-  if (d.toDateString() === today) return `Today ${time}`;
-  if (d.toDateString() === yesterday) return `Yesterday ${time}`;
+  if (d.toDateString() === today) return tNow("when.today", { time });
+  if (d.toDateString() === yesterday) return tNow("when.yesterday", { time });
   return `${formatDate(seconds)} ${time}`;
 }
 

@@ -3,11 +3,13 @@ import { useReadContract } from "wagmi";
 import { kaiAbi } from "../abi/kai";
 import { deployment, targetChain } from "../config/chains";
 import { KindIcon } from "./Art";
+import { useT } from "../i18n";
 import { formatWhen, kindName, shortHex } from "../lib/format";
 
 const PAGE = 5;
 
 export function CareTimeline({ tokenId, total, now }: { tokenId: bigint; total: number; now: number }) {
+  const t = useT();
   const [pages, setPages] = useState(1);
   const limit = pages * PAGE;
   const q = useReadContract({
@@ -22,20 +24,20 @@ export function CareTimeline({ tokenId, total, now }: { tokenId: bigint; total: 
   return (
     <section className="card stack tight-gap" aria-labelledby="record-title">
       <div className="split end">
-        <h2 id="record-title" className="h2">Care record</h2>
-        <span className="muted small">{total} {total === 1 ? "entry" : "entries"} from the farm</span>
+        <h2 id="record-title" className="h2">{t('chicken.timelineTitle')}</h2>
+        <span className="muted small">{t('chicken.entryCount', { n: total, unit: t(total === 1 ? 'chicken.entry' : 'chicken.entries') })}</span>
       </div>
       {total === 0 ? (
-        <p className="muted">The farm has not posted a record for this bird yet. Entries appear here as soon as they are confirmed.</p>
+        <p className="muted">{t('chicken.timelineEmpty')}</p>
       ) : (
         <ol className="timeline">
           {rows.map((r, i) => (
             <li key={`${r.at}-${r.contentHash}-${i}`}>
               <span className="tl-dot" aria-hidden="true"><KindIcon kind={r.kind} size={16} /></span>
               <span className="strong">{kindName(r.kind)}</span>
-              <span className="tl-note">{r.note || "No note."}</span>
+              <span className="tl-note">{r.note || t('chicken.noNote')}</span>
               <span className="muted small tl-when">
-                {formatWhen(Number(r.at), now)} <span className="mono">record {shortHex(r.contentHash)}</span>
+                {formatWhen(Number(r.at), now)} <span className="mono">{t('chicken.record', { hash: shortHex(r.contentHash) })}</span>
               </span>
             </li>
           ))}
@@ -43,7 +45,7 @@ export function CareTimeline({ tokenId, total, now }: { tokenId: bigint; total: 
       )}
       {rows.length < total ? (
         <button type="button" className="btn btn-ghost" onClick={() => setPages((p) => p + 1)} disabled={q.isFetching}>
-          {q.isFetching ? "Loading…" : "Show more"}
+          {q.isFetching ? t('chicken.loading') : t('chicken.showMore')}
         </button>
       ) : null}
     </section>

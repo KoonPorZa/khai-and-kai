@@ -4,6 +4,7 @@ import { estimateGas, getAccount, simulateContract, waitForTransactionReceipt, w
 import { encodeFunctionData, type Abi, type Address, type Hex, type TransactionReceipt } from "viem";
 import { targetChain } from "../config/chains";
 import { friendlyError, type FriendlyError } from "../lib/errors";
+import { tNow } from "../i18n";
 import { useToast } from "../components/Toast";
 
 export type TxCall = { address: Address; abi: Abi; functionName: string; args?: readonly unknown[]; value?: bigint;
@@ -38,7 +39,7 @@ export function useTx() {
         const hash = await writeContract(config, (gas ? { ...rest, chainId: targetChain.id, account, gas } : params) as never);
         setState({ status: "pending", hash });
         const receipt = await waitForTransactionReceipt(config, { hash, chainId: targetChain.id });
-        if (receipt.status !== "success") throw new Error("The transaction was reverted on chain.");
+        if (receipt.status !== "success") throw new Error(tNow("err.reverted"));
         setState({ status: "done", hash });
         return receipt;
       } catch (e) {

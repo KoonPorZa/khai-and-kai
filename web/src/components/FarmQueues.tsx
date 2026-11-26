@@ -11,6 +11,7 @@ import { useTx } from "../hooks/useTx";
 import { useToast } from "./Toast";
 import { recordHash } from "../lib/hash";
 import { bandId, formatWhen, shortHex, speciesLabel } from "../lib/format";
+import { useT } from "../i18n";
 import { useChainNow } from "../hooks/useChainNow";
 
 const chainId = targetChain.id;
@@ -20,6 +21,7 @@ const chainId = targetChain.id;
  * `onOpen` runs when the prompt opens (the row remembers what it showed); `onConfirm` may return "abort" to close the prompt without sending.
  */
 function ConfirmAction({ label, warning, yes, busy, disabled, yesDisabled, onOpen, onConfirm }: { label: string; warning: string; yes: string; busy: boolean; disabled?: boolean; yesDisabled?: boolean; onOpen?: () => void; onConfirm: () => Promise<"abort" | void> }) {
+  const t = useT();
   const [asking, setAsking] = useState(false);
   if (!asking) {
     return (
@@ -37,7 +39,7 @@ function ConfirmAction({ label, warning, yes, busy, disabled, yesDisabled, onOpe
     );
   }
   return (
-    <div className="stack tight-gap" role="group" aria-label={`Confirm: ${label}`}>
+    <div className="stack tight-gap" role="group" aria-label={t('farm.confirmGroup', { label })}>
       <p className="notice small">{warning}</p>
       <div className="row">
         <ActionButton
@@ -50,10 +52,10 @@ function ConfirmAction({ label, warning, yes, busy, disabled, yesDisabled, onOpe
             });
           }}
         >
-          {busy ? "Sending…" : yes}
+          {busy ? t('farm.sending') : yes}
         </ActionButton>
         <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setAsking(false)}>
-          Keep as is
+          {t('farm.keep')}
         </button>
       </div>
     </div>
@@ -75,8 +77,6 @@ function useFreshChicken() {
   };
 }
 
-const CHANGED = "This request changed. Review it again.";
-
 function useChickens(ids: readonly bigint[]) {
   const contracts = useMemo(
     () => ids.map((id) => ({ address: deployment?.kai as Address, abi: kaiAbi, functionName: "chicken" as const, args: [id] as const, chainId })),
@@ -90,6 +90,7 @@ function useChickens(ids: readonly bigint[]) {
 }
 
 export function CollectionRequests() {
+  const t = useT();
   const now = useChainNow();
   const pending = useReadContract({
     address: deployment?.kai,
@@ -102,9 +103,9 @@ export function CollectionRequests() {
   const chicken = useChickens(ids);
   return (
     <section className="card stack" aria-labelledby="requests-title">
-      <h2 id="requests-title" className="h2">Collection requests</h2>
+      <h2 id="requests-title" className="h2">{t('farm.requestsTitle')}</h2>
       {ids.length === 0 ? (
-        <p className="muted">No sponsor is waiting for a handover right now.</p>
+        <p className="muted">{t('farm.requestsEmpty')}</p>
       ) : (
         <div className="queue">
           {ids.map((id, i) => (
@@ -117,6 +118,7 @@ export function CollectionRequests() {
 }
 
 function RequestRow({ id, chicken, now, onDone }: { id: bigint; chicken: ReturnType<ReturnType<typeof useChickens>>; now: number; onDone: () => void }) {
+  const t = useT();
   const tx = useTx();
   const toast = useToast();
   const fresh = useFreshChicken();
@@ -130,7 +132,7 @@ function RequestRow({ id, chicken, now, onDone }: { id: bigint; chicken: ReturnT
     const now = await fresh(id);
     const ok = !!shown && !!now && sameOwner(now.owner, shown.owner) && now.redeemRequestedAt === shown.requestedAt && now.redeemRequestedAt > 0n && now.redeemedAt === 0n;
     if (!ok) {
-      toast("error", CHANGED);
+      toast("error", t('farm.changed'));
       onDone();
     }
     return ok;
@@ -151,23 +153,23 @@ function RequestRow({ id, chicken, now, onDone }: { id: bigint; chicken: ReturnT
     <div className="queue-row">
       <div className="split start">
         <div>
-          <Link to={`/chicken/${id}`} className="strong">{chicken ? speciesLabel(chicken.bird.breed, chicken.bird.sex) : "Chicken"} {bandId(id)}</Link>
+          <Link to={`/chicken/${id}`} className="strong">{chicken ? speciesLabel(chicken.bird.breed, chicken.bird.sex) : t('farm.chicken')} {bandId(id)}</Link>
           <div className="muted small">
-            {chicken ? `Sponsor ${shortHex(chicken.owner)}, requested ${formatWhen(Number(chicken.redeemRequestedAt), now)}` : "Reading…"}
+            {chicken ? t('farm.requestLine', { who: shortHex(chicken.owner), when: formatWhen(Number(chicken.redeemRequestedAt), now) }) : t('farm.reading')}
           </div>
         </div>
       </div>
       <div className="field">
-        <label htmlFor={`handover-${id}`}>Handover form number or reference</label>
-        <textarea id={`handover-${id}`} rows={2} value={record} onChange={(e) => setRecord(e.target.value)} placeholder="e.g. form no. 2026-0042" />
-        <span className="muted small">Do not type names or contact details. The fingerprint of this text is public.</span>
+        <label htmlFor={`handover-${id}`}>{t('farm.handoverLabel')}</label>
+        <textarea id={`handover-${id}`} rows={2} value={record} onChange={(e) => setRecord(e.target.value)} placeholder={t('farm.handoverPlaceholder')} />
+        <span className="muted small">{t('farm.noPersonal')}</span>
         <span className="mono small hash">{hash}</span>
       </div>
       <div className="row">
       <ConfirmAction
-        label="Confirm handover"
-        warning={`This marks ${bandId(id)} as collected for good. Care fees, care records and release stop for this bird, and it can never return to the coop. It cannot be undone.`}
-        yes="Yes, the bird was handed over"
+        label={t('farm.confirmHandover')}
+        warning={t('farm.confirmWarning', { band: bandId(id) })}
+        yes={t('farm.confirmYes')}
         busy={tx.busy}
         disabled={record.trim().length === 0}
         yesDisabled={record.trim().length === 0}
@@ -175,9 +177,9 @@ function RequestRow({ id, chicken, now, onDone }: { id: bigint; chicken: ReturnT
         onConfirm={confirm}
       />
       <ConfirmAction
-        label="Decline"
-        warning={`This refuses the collection request for ${bandId(id)}. The request is cleared, the sponsor keeps the token, and normal care rules apply again. The sponsor can ask again while care is paid.`}
-        yes="Yes, decline the request"
+        label={t('farm.decline')}
+        warning={t('farm.declineWarning', { band: bandId(id) })}
+        yes={t('farm.declineYes')}
         busy={decline.busy}
         onOpen={remember}
         onConfirm={declineRequest}
@@ -188,6 +190,7 @@ function RequestRow({ id, chicken, now, onDone }: { id: bigint; chicken: ReturnT
 }
 
 export function OverdueBirds() {
+  const t = useT();
   const stats = useStats();
   const hatched = stats.data ? Number(stats.data.hatched) : undefined;
   const { ids } = useSponsoredIds(hatched);
@@ -201,9 +204,9 @@ export function OverdueBirds() {
   const chicken = useChickens(releasable);
   return (
     <section className="card stack" aria-labelledby="overdue-title">
-      <h2 id="overdue-title" className="h2">Overdue birds</h2>
+      <h2 id="overdue-title" className="h2">{t('farm.overdueTitle')}</h2>
       {releasable.length === 0 ? (
-        <p className="muted">No bird has been overdue for more than 3 care periods.</p>
+        <p className="muted">{t('farm.overdueEmpty')}</p>
       ) : (
         <div className="queue">
           {releasable.map((id, i) => (
@@ -216,6 +219,7 @@ export function OverdueBirds() {
 }
 
 function ReleaseRow({ id, chicken, onDone }: { id: bigint; chicken: ReturnType<ReturnType<typeof useChickens>>; onDone: () => void }) {
+  const t = useT();
   const tx = useTx();
   const now = useChainNow();
   const toast = useToast();
@@ -225,7 +229,7 @@ function ReleaseRow({ id, chicken, onDone }: { id: bigint; chicken: ReturnType<R
     if (!deployment) return;
     const current = await fresh(id);
     if (!shown || !current || !sameOwner(current.owner, shown.owner) || current.carePaidUntil !== shown.paidUntil || current.redeemedAt !== 0n || current.redeemRequestedAt !== shown.requestedAt) {
-      toast("error", CHANGED);
+      toast("error", t('farm.changed'));
       onDone();
       return "abort";
     }
@@ -235,15 +239,15 @@ function ReleaseRow({ id, chicken, onDone }: { id: bigint; chicken: ReturnType<R
   return (
     <div className="queue-row">
       <div>
-        <Link to={`/chicken/${id}`} className="strong">{chicken ? speciesLabel(chicken.bird.breed, chicken.bird.sex) : "Chicken"} {bandId(id)}</Link>
+        <Link to={`/chicken/${id}`} className="strong">{chicken ? speciesLabel(chicken.bird.breed, chicken.bird.sex) : t('farm.chicken')} {bandId(id)}</Link>
         <div className="muted small">
-          {chicken ? `Sponsor ${shortHex(chicken.owner)}, care ran out ${formatWhen(Number(chicken.carePaidUntil), now)}` : "Reading…"}
+          {chicken ? t('farm.ranOut', { who: shortHex(chicken.owner), when: formatWhen(Number(chicken.carePaidUntil), now) }) : t('farm.reading')}
         </div>
       </div>
       <ConfirmAction
-        label="Return to the coop"
-        warning={`This burns the sponsor's token for ${bandId(id)} and puts the bird back in the pool for a new sponsor. Its care records stay with the bird. It cannot be undone.`}
-        yes="Yes, return it to the coop"
+        label={t('farm.returnLabel')}
+        warning={t('farm.returnWarning', { band: bandId(id) })}
+        yes={t('farm.returnYes')}
         busy={tx.busy}
         onOpen={() => setShown(chicken ? { owner: chicken.owner, paidUntil: chicken.carePaidUntil, requestedAt: chicken.redeemRequestedAt } : undefined)}
         onConfirm={release}

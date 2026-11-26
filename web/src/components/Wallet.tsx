@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAccount, useBalance, useConnect, useConnectors, useDisconnect, useSwitchChain } from "wagmi";
 import { formatNative, shortHex } from "../lib/format";
 import { friendlyError } from "../lib/errors";
+import { useT } from "../i18n";
 import { nativeSymbol, networkLabel, targetChain, FAUCET } from "../config/chains";
 import { useToast } from "./Toast";
 
@@ -25,6 +26,7 @@ function ConnectDialog({ open, onClose }: { open: boolean; onClose: () => void }
   const connectors = useConnectors();
   const { connectAsync, isPending, variables } = useConnect();
   const toast = useToast();
+  const t = useT();
 
   useEffect(() => {
     const d = ref.current;
@@ -57,20 +59,20 @@ function ConnectDialog({ open, onClose }: { open: boolean; onClose: () => void }
     <dialog ref={ref} className="dialog" onClose={onClose} onClick={(e) => e.target === ref.current && onClose()} aria-labelledby="connect-title">
       <div className="dialog-card">
         <div className="dialog-head">
-          <h2 id="connect-title">Connect a wallet</h2>
-          <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
+          <h2 id="connect-title">{t("wallet.connectTitle")}</h2>
+          <button type="button" className="icon-btn" aria-label={t("wallet.close")} onClick={onClose}>
             &times;
           </button>
         </div>
-        <p className="muted small">Your wallet is your account. Nothing is stored on a server.</p>
+        <p className="muted small">{t("wallet.intro")}</p>
         {list.length === 0 ? (
           <div className="notice wallet-help">
-            <strong>No wallet found in this browser</strong>
+            <strong>{t("wallet.noneTitle")}</strong>
             <span>
-              On a computer, install a wallet extension such as <a href="https://metamask.io/download/" target="_blank" rel="noreferrer">MetaMask</a>, then reload this page.
+              {t("wallet.noneDesktopBefore")}<a href="https://metamask.io/download/" target="_blank" rel="noreferrer">MetaMask</a>{t("wallet.noneDesktopAfter")}
             </span>
-            <span>On a phone, open this page inside your wallet app's browser.</span>
-            <span>You can still browse everything read-only.</span>
+            <span>{t("wallet.nonePhone")}</span>
+            <span>{t("wallet.noneReadOnly")}</span>
           </div>
         ) : (
           <ul className="wallet-list">
@@ -78,15 +80,15 @@ function ConnectDialog({ open, onClose }: { open: boolean; onClose: () => void }
               <li key={c.uid}>
                 <button type="button" className="wallet-option" disabled={isPending} onClick={() => pick(c.uid)}>
                   {c.icon ? <img src={c.icon} alt="" width={28} height={28} /> : <span className="wallet-fallback" aria-hidden="true" />}
-                  <span>{__LOCAL__ && c.id === "mock" ? "Local test wallet" : c.id === "injected" ? "Browser wallet" : c.name}</span>
-                  {isPending && variables?.connector && "uid" in variables.connector && variables.connector.uid === c.uid ? <span className="muted small">Check your wallet</span> : null}
+                  <span>{__LOCAL__ && c.id === "mock" ? "Local test wallet" : c.id === "injected" ? t("wallet.browserWallet") : c.name}</span>
+                  {isPending && variables?.connector && "uid" in variables.connector && variables.connector.uid === c.uid ? <span className="muted small">{t("wallet.checkWallet")}</span> : null}
                 </button>
               </li>
             ))}
           </ul>
         )}
         <p className="muted small">
-          Need test coins? Use the <a href={FAUCET} target="_blank" rel="noreferrer">BNB testnet faucet</a>.
+          {t("wallet.faucetBefore")}<a href={FAUCET} target="_blank" rel="noreferrer">{t("wallet.faucetLink")}</a>{t("wallet.faucetAfter")}
         </p>
       </div>
     </dialog>
@@ -100,12 +102,13 @@ export function useWalletState() {
 }
 
 export function NetworkBadge() {
+  const t = useT();
   const { isConnected, wrongNetwork } = useWalletState();
   const ok = !wrongNetwork;
   return (
-    <span className="net-badge" title={isConnected && wrongNetwork ? "Wallet is on another network" : networkLabel}>
+    <span className="net-badge" title={isConnected && wrongNetwork ? t("wallet.otherNetwork") : networkLabel}>
       <span className={`dot ${ok ? "dot-ok" : "dot-bad"}`} aria-hidden="true" />
-      {wrongNetwork ? "Wrong network" : networkLabel}
+      {wrongNetwork ? t("wallet.wrongNetwork") : networkLabel}
     </span>
   );
 }
@@ -116,6 +119,7 @@ export function WalletButton() {
   const { disconnect } = useDisconnect();
   const { switchChainAsync, isPending } = useSwitchChain();
   const toast = useToast();
+  const t = useT();
   const balance = useBalance({ address, chainId: targetChain.id, query: { enabled: !!address, refetchInterval: 10_000 } });
   const [menu, setMenu] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
@@ -140,14 +144,14 @@ export function WalletButton() {
       await switchChainAsync({ chainId: targetChain.id });
     } catch (e) {
       const f = friendlyError(e);
-      toast("error", f.kind === "rejected" ? "Network switch cancelled." : "Could not switch network.", f.detail);
+      toast("error", f.kind === "rejected" ? t("wallet.switchCancelled") : t("wallet.switchFailed"), f.detail);
     }
-  }, [switchChainAsync, toast]);
+  }, [switchChainAsync, toast, t]);
 
   if (!isConnected || !address) {
     return (
       <button type="button" className="btn btn-outline" onClick={modal.open}>
-        Connect wallet
+        {t("wallet.connect")}
       </button>
     );
   }
@@ -155,7 +159,7 @@ export function WalletButton() {
     <div className="wallet-wrap" ref={wrap}>
       {wrongNetwork ? (
         <button type="button" className="btn btn-coral" onClick={switchNow} disabled={isPending}>
-          Switch to {networkLabel}
+          {t("wallet.switchTo", { network: networkLabel })}
         </button>
       ) : null}
       <button type="button" className="pill mono" aria-expanded={menu} aria-haspopup="menu" onClick={() => setMenu((m) => !m)}>
@@ -164,11 +168,11 @@ export function WalletButton() {
       {menu ? (
         <div className="menu" role="menu">
           <div className="menu-row">
-            <span className="muted small">Balance</span>
+            <span className="muted small">{t("wallet.balance")}</span>
             <span className="mono">{balance.data ? `${formatNative(balance.data.value)} ${nativeSymbol}` : "…"}</span>
           </div>
           <div className="menu-row">
-            <span className="muted small">Address</span>
+            <span className="muted small">{t("wallet.address")}</span>
             <span className="mono small">{shortHex(address, 8, 6)}</span>
           </div>
           <button
@@ -180,7 +184,7 @@ export function WalletButton() {
               setMenu(false);
             }}
           >
-            Disconnect
+            {t("wallet.disconnect")}
           </button>
         </div>
       ) : null}
@@ -210,11 +214,12 @@ export function ActionButton({
   const modal = useConnectModal();
   const { switchChainAsync } = useSwitchChain();
   const toast = useToast();
+  const t = useT();
   const cls = `btn btn-${variant} ${className}`;
   if (!isConnected) {
     return (
       <button type="button" className={cls} onClick={modal.open}>
-        Connect wallet
+        {t("wallet.connect")}
       </button>
     );
   }
@@ -226,11 +231,11 @@ export function ActionButton({
         onClick={() =>
           switchChainAsync({ chainId: targetChain.id }).catch((e) => {
             const f = friendlyError(e);
-            toast("error", "Could not switch network.", f.detail);
+            toast("error", t("wallet.switchFailed"), f.detail);
           })
         }
       >
-        Switch to {networkLabel}
+        {t("wallet.switchTo", { network: networkLabel })}
       </button>
     );
   }

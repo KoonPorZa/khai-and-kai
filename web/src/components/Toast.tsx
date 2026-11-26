@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { plain } from "../lib/errors";
+import { tNow, useT } from "../i18n";
 
 type ToastKind = "ok" | "error" | "info";
 type Toast = { id: number; kind: ToastKind; title: string; detail?: string };
@@ -13,10 +14,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const nextId = useRef(1);
   const push = useCallback<Push>((kind, title, detail) => {
     const id = nextId.current++;
-    setToasts((t) => [...t.slice(-2), { id, kind, title: plain(title) ?? "Something went wrong.", detail: plain(detail) }]);
+    setToasts((t) => [...t.slice(-2), { id, kind, title: plain(title) ?? tNow("toast.fallbackTitle"), detail: plain(detail) }]);
     window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), kind === "error" ? 9000 : 5000);
   }, []);
   const value = useMemo(() => push, [push]);
+  const tx = useT();
   // The popover lives in the browser's top layer, so toasts show above an open modal dialog.
   const layer = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -35,7 +37,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <strong>{t.title}</strong>
               {t.detail ? <span>{t.detail}</span> : null}
             </div>
-            <button type="button" className="toast-close" aria-label="Dismiss" onClick={() => setToasts((all) => all.filter((x) => x.id !== t.id))}>
+            <button type="button" className="toast-close" aria-label={tx("toast.dismiss")} onClick={() => setToasts((all) => all.filter((x) => x.id !== t.id))}>
               &times;
             </button>
           </div>
