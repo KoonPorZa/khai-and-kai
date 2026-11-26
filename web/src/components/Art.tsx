@@ -33,7 +33,11 @@ export function LogoMark({ size = 28 }: { size?: number }) {
 
 const KIND_ICONS = [feeding, health, weight, vaccination, photo, note];
 
-/** The illustrator's care icons (currentColor line art), indexed by proof kind. */
+/**
+ * The illustrator's care icons (currentColor line art), indexed by proof kind.
+ * Injecting raw markup is safe here only because the markup comes from the bundled KIND_ICONS map and `kind` merely
+ * picks an entry; no chain data, URL or user text ever reaches it (test/hardening.test.tsx enforces that).
+ */
 export function KindIcon({ kind, size = 22 }: { kind: number; size?: number }) {
   const svg = (KIND_ICONS[kind] ?? note).replace(/width="24" height="24"/, `width="${size}" height="${size}"`);
   return <span className="kind-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} />;

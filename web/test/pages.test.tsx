@@ -238,13 +238,17 @@ describe("chicken page", () => {
     expect(firstWrite()).toMatchObject({ functionName: "payCare", args: [4n, 1n], value: ETH / 1000n });
   });
 
-  it("explains what Check the draw proves, and runs it", async () => {
+  it("explains what Check the draw checks, and runs it against two RPC endpoints", async () => {
     withChicken(2520);
+    const fetchMock = vi.fn(async () => ({ json: async () => ({ result: { hash: `0x${"ab".repeat(32)}` } }) }));
+    vi.stubGlobal("fetch", fetchMock);
     show("/chicken/4");
     expect(screen.getByText("How this bird was drawn")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Check the draw" }));
     // The mocked block hash cannot reproduce the recorded seed, so the page reports a mismatch instead of a pass.
     await waitFor(() => expect(screen.getByText(/does not match the contract/)).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    vi.unstubAllGlobals();
   });
 
   it("labels a fallback hatch", () => {

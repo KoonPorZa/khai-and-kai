@@ -13,5 +13,8 @@ export function decodeTokenUri(uri: string): { name?: string; description?: stri
   return undefined;
 }
 
-/** Only data:image URIs from the contract are rendered. */
+/**
+ * Only data:image URIs from the contract are rendered. The image must only ever be used as the src of an <img> element
+ * (never inlined as markup): inside <img> an SVG cannot run scripts.
+ */
 export const isImageDataUri = (s: unknown): s is string => typeof s === "string" && /^data:image\/(svg\+xml|png|webp|jpeg)[;,]/.test(s);

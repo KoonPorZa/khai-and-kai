@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useBlock, useConfig } from "wagmi";
-import { getBlock } from "wagmi/actions";
+import { useBlock } from "wagmi";
 import { Check, Warn } from "./Art";
-import { targetChain } from "../config/chains";
+import { CHECK_RPCS, targetChain } from "../config/chains";
+import { agreeOnHash, fetchBlockHash } from "../lib/blockHash";
 import { formatNumber, shortHex } from "../lib/format";
 import { verifyHatch } from "../lib/verifyHatch";
 import type { Hex } from "viem";
@@ -16,10 +16,14 @@ type Props = {
   index: bigint;
 };
 
-type Result = { status: "idle" } | { status: "running" } | { status: "ok"; position: bigint } | { status: "bad" } | { status: "error"; message: string };
+type Result =
+  | { status: "idle" }
+  | { status: "running" }
+  | { status: "ok"; position: bigint; sources: 1 | 2 }
+  | { status: "bad" }
+  | { status: "error"; message: string };
 
 export function CheckDraw({ hatchId, revealBlock, usedFallback, seed, poolSizeAtFinish, index }: Props) {
-  const config = useConfig();
   const [result, setResult] = useState<Result>({ status: "idle" });
   const block = useBlock({ blockNumber: revealBlock, chainId: targetChain.id, query: { staleTime: Infinity } });
   const hash = block.data?.hash ?? undefined;
@@ -28,13 +32,17 @@ export function CheckDraw({ hatchId, revealBlock, usedFallback, seed, poolSizeAt
     setResult({ status: "running" });
     try {
       let revealBlockHash: Hex | undefined;
+      let sources: 1 | 2 = 2;
       if (!usedFallback) {
-        const b = await getBlock(config, { blockNumber: revealBlock, chainId: targetChain.id });
-        revealBlockHash = b.hash ?? undefined;
-        if (!revealBlockHash) throw new Error("The RPC did not return the block hash.");
+        // The block hash comes straight from two different RPC endpoints and they have to agree.
+        const agreed = agreeOnHash(await Promise.all(CHECK_RPCS.map((url) => fetchBlockHash(url, revealBlock))));
+        if (agreed.status === "disagree") throw new Error("Two RPC endpoints returned different hashes for the reveal block. Try again later.");
+        if (agreed.status === "none") throw new Error("No RPC endpoint returned the reveal block hash.");
+        revealBlockHash = agreed.hash;
+        sources = agreed.sources;
       }
       const r = verifyHatch({ hatchId, revealBlock, usedFallback, revealBlockHash, poolSizeAtFinish }, { seed, index });
-      setResult(r.ok ? { status: "ok", position: r.index + 1n } : { status: "bad" });
+      setResult(r.ok ? { status: "ok", position: r.index + 1n, sources } : { status: "bad" });
     } catch (e) {
       setResult({ status: "error", message: e instanceof Error ? e.message : "Could not load the block." });
     }
@@ -62,7 +70,16 @@ export function CheckDraw({ hatchId, revealBlock, usedFallback, seed, poolSizeAt
       </div>
       <div className="check-result" role="status">
         {result.status === "ok" ? (
-          <p className="row nowrap ok-text"><Check size={18} /><span>Checked in your browser. {usedFallback ? "The hatch number and block number" : "The block hash and hatch number"} give position {formatNumber(result.position)} of {formatNumber(poolSizeAtFinish)}, the same as the contract recorded. That proves the position was not chosen by anyone. Which bird sat at that position is contract state at that block.</span></p>
+          <div className="stack tight-gap">
+            <p className="row nowrap ok-text">
+              <Check size={18} />
+              <span>
+                Checked in your browser: the {usedFallback ? "seed" : "seed and pool position"} recomputed from the {usedFallback ? "hatch number and block number" : "block hash and hatch number"} match what the contract stored (position {formatNumber(result.position)} of {formatNumber(poolSizeAtFinish)}).
+                {usedFallback ? " The seed came from the hatch number because the block hash had expired." : result.sources === 1 ? " Checked against one RPC." : " Two RPC endpoints gave the same block hash."}
+              </span>
+            </p>
+            <p className="muted small">Limit: whoever finished the hatch could see the block hash before sending the transaction. Which bird sat at that position is contract state at that block.</p>
+          </div>
         ) : null}
         {result.status === "bad" ? <p className="row nowrap bad-text"><Warn size={18} /><span>The recomputed draw does not match the contract. Do not trust this record.</span></p> : null}
         {result.status === "error" ? <p className="row nowrap bad-text"><Warn size={18} /><span>{result.message}</span></p> : null}

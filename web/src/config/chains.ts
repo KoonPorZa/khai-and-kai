@@ -25,6 +25,9 @@ export const TESTNET_RPCS = [
   "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
 ];
 
+/** Endpoints Check the draw asks for the reveal block hash; two different operators must agree. */
+export const CHECK_RPCS: string[] = __LOCAL__ ? [...targetChain.rpcUrls.default.http] : TESTNET_RPCS.slice(0, 2);
+
 export const EXPLORER = "https://testnet.bscscan.com";
 export const GITHUB = "https://github.com/KoonPorZa/khai-and-kai";
 export const FAUCET = "https://www.bnbchain.org/en/testnet-faucet";
