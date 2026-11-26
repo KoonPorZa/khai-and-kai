@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "preview": "vite preview",
-    "sync-art": "node scripts/sync-art.mjs"
+    "sync-art": "node scripts/sync-art.mjs",
+    "render:hatch": "node hatch-film/build.mjs && cd hatch-film && hyperframes render -o ../public/art/hatch.mp4",
+    "lint:hatch": "node hatch-film/build.mjs && cd hatch-film && hyperframes lint"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",
@@ -36,6 +38,7 @@
     "eslint": "^10.15.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",
+    "gsap": "^3.15.1",
     "hyperframes": "^0.9.92",
     "jsdom": "^31.0.1",
     "typescript": "^5.9.3",

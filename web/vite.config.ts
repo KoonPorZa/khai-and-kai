@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { existsSync, readFileSync } from "node:fs";
 
 const LOCAL = process.env.VITE_LOCAL === "1";
 
@@ -17,12 +18,29 @@ function onlyTestnetDeployments(): Plugin {
   };
 }
 
+// Adds og:image / twitter:image once the illustrator's og image has been synced (see scripts/sync-art.mjs).
+function socialPreview(): Plugin {
+  return {
+    name: "social-preview",
+    transformIndexHtml() {
+      const file = new URL("./src/art/manifest.json", import.meta.url);
+      const og = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as { og?: string | null }).og : null;
+      if (!og) return [];
+      return [
+        { tag: "meta", attrs: { property: "og:image", content: og }, injectTo: "head" },
+        { tag: "meta", attrs: { name: "twitter:card", content: "summary_large_image" }, injectTo: "head" },
+        { tag: "meta", attrs: { name: "twitter:image", content: og }, injectTo: "head" },
+      ];
+    },
+  };
+}
+
 export default defineConfig(({ command }) => {
   if (command === "build" && LOCAL) {
     throw new Error("VITE_LOCAL=1 is for the dev server only. Production builds target BNB testnet (97).");
   }
   return {
-    plugins: [react(), onlyTestnetDeployments()],
+    plugins: [react(), onlyTestnetDeployments(), socialPreview()],
     define: { __LOCAL__: JSON.stringify(LOCAL) },
     build: { chunkSizeWarningLimit: 900 },
   };

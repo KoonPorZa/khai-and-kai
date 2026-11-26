@@ -10,7 +10,7 @@ const localChain = __LOCAL__
       name: "Local Hardhat",
       nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
       rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } },
-      contracts: { multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11", blockCreated: 0 } },
+      // No multicall3 contract: a fresh Hardhat node does not have one, so reads go out one by one.
     })
   : undefined;
 

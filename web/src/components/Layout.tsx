@@ -29,7 +29,9 @@ function Nav({ className, label }: { className: string; label: string }) {
 
 export function Layout() {
   const location = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [location.pathname]);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
   return (
     <div className="shell">
       <a className="skip" href="#main">Skip to content</a>

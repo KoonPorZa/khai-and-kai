@@ -11,8 +11,20 @@ import photo from "../assets/brand/photo.svg?raw";
 import note from "../assets/brand/note.svg?raw";
 import { breedName, plumageName, sexName } from "../lib/format";
 
+const EGG_OUTLINE = "M200 58 C128 58 88 157 96 240 C102 306 146 345 200 345 C254 345 298 306 304 240 C312 157 272 58 200 58Z";
+
+/** The illustrator's egg frame, cut to the egg's outline so its square backdrop does not show. */
 export function EggSvg({ width = 132, cracked = false, label = "An egg" }: { width?: number; cracked?: boolean; label?: string }) {
-  return <img src={cracked ? crackedUrl : eggUrl} width={width} alt={label} aria-hidden={label ? undefined : true} />;
+  return (
+    <svg width={width} height={(width * 300) / 250} viewBox="75 48 250 300" role={label ? "img" : undefined} aria-label={label || undefined} aria-hidden={label ? undefined : true}>
+      <defs>
+        <clipPath id="egg-outline">
+          <path d={EGG_OUTLINE} />
+        </clipPath>
+      </defs>
+      <image href={cracked ? crackedUrl : eggUrl} width="400" height="400" clipPath="url(#egg-outline)" />
+    </svg>
+  );
 }
 
 export function LogoMark({ size = 28 }: { size?: number }) {
