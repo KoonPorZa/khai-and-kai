@@ -1,4 +1,31 @@
 {
+  "97": {
+    "chainId": 97,
+    "status": "complete",
+    "deployer": "0xd2f07dc83b28f25973767a8f4ffad795a723230b",
+    "blockNumber": 144912314,
+    "deployedAt": "2026-11-26T04:02:03.458Z",
+    "contracts": {
+      "KaiRenderer": "0xd0B4AEDcAe73Efb51FE214D9DCc51910d332c1a2",
+      "Khai": "0x2d30cb50c94387967123440c052EDc9372DA1383",
+      "Kai": "0xb3f6a0dc452e3aB7eD4D2D003926b0F32964251F"
+    },
+    "parameters": {
+      "admin": "0xd2f07dc83b28f25973767a8f4ffad795a723230b",
+      "farm": "0xd2f07dc83b28f25973767a8f4ffad795a723230b",
+      "price": "10000000000000000",
+      "dailyLimit": "3",
+      "careFee": "1000000000000000",
+      "carePeriod": "3600",
+      "hatchDelayBlocks": 2
+    },
+    "gas": {
+      "deploy KaiRenderer": "3203924",
+      "deploy Khai": "2077010",
+      "deploy Kai": "3156064",
+      "Khai.setKai": "50967"
+    }
+  },
   "31337": {
     "chainId": 31337,
     "status": "complete",
