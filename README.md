@@ -199,6 +199,7 @@ flowchart LR
 - **Test coverage.** The contracts have 47 passing tests and the web app over 70. The web app was tested with scripted component tests, an end-to-end test against a local chain, and browser screenshots. Wallet flows (connect, switch network, signing) have not been driven in a real browser and need a real wallet.
 - **The farm can register birds while hatches are pending.** Adding birds changes the pool size, so a farm that sees a pending hatch's block hash could shift which position it lands on. With no tiers there is nothing to gain; production should block registration while hatches are pending.
 - **One key holds both roles.** On testnet the deployer is both admin and farm. Production needs separate keys or a multisig, and a delay on replacing the renderer.
+- **Fingerprints are unsalted hashes of short text.** The handover and care-record fingerprints are public and guessable, so farms should enter form numbers or references, not names or contact details.
 - **Release can be avoided cheaply.** Paying one period just before the release point makes the chicken current again, so a sponsor can avoid release without settling the arrears.
 - **The admin can change the care fee at any time.** On testnet that is one key.
 - **The farm changes the pool size while hatches are pending.** Besides registering birds, returning a bird to the coop adds one to the pool, with the same effect on pending draws.
