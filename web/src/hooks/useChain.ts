@@ -148,3 +148,20 @@ export function useFarmRole() {
   });
   return { isFarm: has.data === true, isLoading: role.isLoading || has.isLoading };
 }
+
+/** Token ids (from `ids`) whose bird has been collected; only read when the contract says some were. */
+export function useCollectedIds(ids: Set<number>, enabled: boolean) {
+  const list = useMemo(() => [...ids].sort((a, b) => a - b), [ids]);
+  const contracts = useMemo(
+    () => list.map((id) => ({ address: deployment?.kai as Address, abi: kaiAbi, functionName: "chicken" as const, args: [BigInt(id)] as const, chainId })),
+    [list],
+  );
+  const q = useReadContracts({ contracts, allowFailure: true, query: { enabled: !!deployment && enabled && list.length > 0, refetchInterval: POLL * 2 } });
+  return useMemo(() => {
+    const set = new Set<number>();
+    (q.data ?? []).forEach((r, i) => {
+      if (r.status === "success" && r.result.redeemedAt > 0n) set.add(list[i]!);
+    });
+    return set;
+  }, [q.data, list]);
+}

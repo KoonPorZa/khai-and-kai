@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { CoopGrid } from "../components/CoopGrid";
 import { deployment, GITHUB } from "../config/chains";
-import { useSponsoredIds, useStats, useCareParams, useEggInfo } from "../hooks/useChain";
+import { useCollectedIds, useSponsoredIds, useStats, useCareParams, useEggInfo } from "../hooks/useChain";
 import { formatNative, formatNumber } from "../lib/format";
 import { nativeSymbol } from "../config/chains";
 import { artManifest } from "../lib/art";
@@ -35,6 +35,8 @@ function CoopTonight() {
   const total = s ? Number(s.birdsRegistered) : 0;
   const hatched = s ? Number(s.hatched) : undefined;
   const { ids } = useSponsoredIds(hatched);
+  const collectedCount = s ? Number(s.collected) : 0;
+  const collectedIds = useCollectedIds(ids, collectedCount > 0);
   const wide = useMediaQuery("(min-width: 900px)");
   return (
     <section className="card coop-card" aria-labelledby="coop-title">
@@ -43,13 +45,13 @@ function CoopTonight() {
         <span className="muted small">{s ? `${formatNumber(total)} birds registered` : deployment ? "Reading the contract…" : "Not deployed yet"}</span>
       </div>
       {s && total > 0 ? (
-        <CoopGrid total={total} sponsored={ids} pending={Number(s.pendingHatches)} columns={wide ? 25 : 20} />
+        <CoopGrid total={total} sponsored={ids} pending={Number(s.pendingHatches)} columns={wide ? 25 : 20} collected={collectedIds} />
       ) : (
         <div className="empty-grid">{deployment ? (stats.isLoading ? "Loading the coop…" : "No birds are registered yet.") : "The grid appears after the contracts are deployed."}</div>
       )}
       <p className="muted small">
         Each window is one bird. It lights up when someone hatches its egg. Tap a lit window to open that chicken. Read straight from the contract
-        {s ? `, ${formatNumber(s.careProofs)} care records so far` : ""}.
+        {s ? `, ${formatNumber(s.careProofs)} care records so far` : ""}{collectedCount > 0 ? `, ${formatNumber(collectedCount)} ${collectedCount === 1 ? "bird" : "birds"} collected` : ""}.
       </p>
     </section>
   );
@@ -62,7 +64,8 @@ function HowItWorks() {
     ["Get an egg", `${egg.price !== undefined ? formatNative(egg.price) : "0.001"} ${nativeSymbol}. Up to ${egg.dailyLimit !== undefined ? String(egg.dailyLimit) : "20"} a day, and never more eggs than birds in the coop.`],
     ["Hatch it", "A block hash picks your bird. No bird is drawn twice, and you can check the draw yourself."],
     ["Keep it cared for", `Pay the care fee${care.careFee !== undefined ? ` (${formatNative(care.careFee)} ${nativeSymbol})` : ""} each period. The farm posts what it did. A chicken with unpaid care can't change hands.`],
-  ] as const;
+      ["Collect, pass on, or let go", "Collect the real bird from the farm and keep the token as its record, pass the token on to someone else, or stop paying: after a long lapse the farm may return the bird to the coop for a new sponsor."],
+] as const;
   return (
     <section className="how" aria-labelledby="how-title">
       <h2 id="how-title" className="h2 h2-lg">How it works</h2>

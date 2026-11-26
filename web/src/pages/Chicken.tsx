@@ -12,7 +12,7 @@ import { useBird, useCareParams, useChicken, useHatch } from "../hooks/useChain"
 import { useChainNow } from "../hooks/useChainNow";
 import { useTx } from "../hooks/useTx";
 import { decodeTokenUri, isImageDataUri } from "../lib/chickenArt";
-import { ageLabel, bandId, clockTime, formatDate, formatDuration, formatNative, periodLabel, plumageName, sexName, shortHex, speciesLabel } from "../lib/format";
+import { ageLabel, bandId, clockTime, formatDate, formatWhen, formatDuration, formatNative, periodLabel, plumageName, sexName, shortHex, speciesLabel } from "../lib/format";
 
 const PERIOD_CHOICES = [1, 3, 24];
 
@@ -47,6 +47,16 @@ export function ChickenPage() {
     const meta = uri.data ? decodeTokenUri(uri.data) : undefined;
     return isImageDataUri(meta?.image) ? meta.image : undefined;
   }, [uri.data]);
+  const releasable = useReadContract({
+    address: deployment?.kai,
+    abi: kaiAbi,
+    functionName: "releasableAt",
+    args: [id ?? 0n],
+    chainId: targetChain.id,
+    query: { enabled: !!deployment && !!c, refetchInterval: 10_000 },
+  });
+  const requestTx = useTx();
+  const cancelTx = useTx();
   const [periods, setPeriods] = useState(1);
 
   if (id === undefined || id === 0n) {
@@ -96,12 +106,16 @@ export function ChickenPage() {
     );
   }
 
+  const redeemed = c.redeemedAt > 0n;
+  const requested = c.redeemRequestedAt > 0n;
   const left = Number(c.carePaidUntil) - now;
-  const overdue = left < 0;
+  const overdue = !redeemed && left < 0;
   const period = Number(carePeriod ?? 0n) > 0 ? Number(carePeriod) : 3600; // never divide by a zero period
   // Share of the current period that has passed; with several periods paid ahead it counts within the one running now.
   const progress = overdue ? 100 : Math.round((1 - (left % period || period) / period) * 100);
   const mine = !!address && address.toLowerCase() === c.owner.toLowerCase();
+  const releaseAt = releasable.data !== undefined ? Number(releasable.data) : 0;
+  const canRelease = !redeemed && overdue && releaseAt > 0 && now > releaseAt;
   const name = speciesLabel(c.bird.breed, c.bird.sex);
   const cap = Number(maxPeriods ?? 8760n);
   const choices = PERIOD_CHOICES.filter((p) => p <= cap);
@@ -113,6 +127,19 @@ export function ChickenPage() {
     const receipt = await tx.run({ address: deployment!.kai, abi: kaiAbi, functionName: "payCare", args: [id, BigInt(n)], value: total });
     if (!receipt) return;
     toast("ok", `Care paid for ${bandId(id)}.`, `Covered for ${formatDuration(n * period)} more.`);
+    chicken.refetch();
+  };
+
+  const request = async () => {
+    const receipt = await requestTx.run({ address: deployment!.kai, abi: kaiAbi, functionName: "requestRedeem", args: [id] });
+    if (!receipt) return;
+    toast("ok", `Collection requested for ${bandId(id)}.`, "The farm will hand the bird over and confirm it here.");
+    chicken.refetch();
+  };
+  const cancel = async () => {
+    const receipt = await cancelTx.run({ address: deployment!.kai, abi: kaiAbi, functionName: "cancelRedeem", args: [id] });
+    if (!receipt) return;
+    toast("info", "Collection request cancelled.");
     chicken.refetch();
   };
 
@@ -155,6 +182,18 @@ export function ChickenPage() {
         </div>
 
         <div className="stack">
+          {redeemed ? (
+            <section className="card care care-ok collected" aria-labelledby="collected-title">
+              <div className="row nowrap">
+                <Check size={24} />
+                <div>
+                  <h2 id="collected-title" className="strong">Collected on {formatDate(Number(c.redeemedAt))}</h2>
+                  <div className="muted small">This token is now the bird's permanent record. There is no care fee any more, and it can be transferred freely.</div>
+                </div>
+              </div>
+            </section>
+          ) : (
+            <>
           <section className={`card care ${overdue ? "care-bad" : "care-ok"}`} aria-labelledby="care-title">
             <div className="row nowrap">
               {overdue ? <Warn /> : <Check size={24} />}
@@ -192,6 +231,39 @@ export function ChickenPage() {
             </p>
           </section>
 
+
+            {overdue && releaseAt > 0 ? (
+              <p className={`notice small ${canRelease ? "notice-bad" : ""}`} role="status">
+                {canRelease
+                  ? "This bird can now be returned to the coop. Pay care to keep it."
+                  : `The farm may return this bird to the coop after ${formatWhen(releaseAt, now)}. Paying care before then keeps it yours.`}
+              </p>
+            ) : null}
+
+            {requested ? (
+              <section className="card stack tight-gap collect-pending" aria-labelledby="collect-title">
+                <h2 id="collect-title" className="strong">Collection requested on {formatDate(Number(c.redeemRequestedAt))}</h2>
+                <p className="muted small">Waiting for the farm to hand over the bird. The token cannot be transferred meanwhile, and care still runs.</p>
+                {mine ? (
+                  <ActionButton variant="outline" className="btn-block" onClick={cancel} busy={cancelTx.busy}>
+                    {cancelTx.state.status === "wallet" ? "Confirm in your wallet…" : cancelTx.state.status === "pending" ? "Cancelling…" : "Cancel request"}
+                  </ActionButton>
+                ) : null}
+              </section>
+            ) : mine && !overdue ? (
+              <section className="card stack tight-gap" aria-labelledby="collect-title">
+                <h2 id="collect-title" className="strong">Collect this bird</h2>
+                <p className="muted small">
+                  The farm hands over the real bird. The token stays with you as the bird's record, and care fees stop. You can cancel until the farm confirms.
+                </p>
+                <ActionButton variant="outline" className="btn-block" onClick={request} busy={requestTx.busy}>
+                  {requestTx.state.status === "wallet" ? "Confirm in your wallet…" : requestTx.state.status === "pending" ? "Requesting…" : "Collect this bird"}
+                </ActionButton>
+              </section>
+            ) : null}
+            </>
+          )}
+
           <CareTimeline tokenId={c.tokenId} total={Number(c.proofCount)} now={now} />
 
           <section className="card row nowrap onchain">
@@ -223,6 +295,16 @@ function BackLink() {
 
 /** A registered bird that nobody has hatched yet: its traits, its art, and the way to sponsor one. */
 function WaitingBird({ id, bird, now }: { id: bigint; bird: { breed: number; sex: number; plumage: number; bornAt: bigint | number }; now: number }) {
+  // Care proofs stay with the bird id, so a bird returned to the coop still shows what it went through before.
+  const history = useReadContract({
+    address: deployment?.kai,
+    abi: kaiAbi,
+    functionName: "careProofs",
+    args: [id, 0n, 100n],
+    chainId: targetChain.id,
+    query: { enabled: !!deployment, staleTime: 30_000 },
+  });
+  const earlier = history.data?.length ?? 0;
   return (
     <div className="stack">
       <BackLink />
@@ -239,7 +321,7 @@ function WaitingBird({ id, bird, now }: { id: bigint; bird: { breed: number; sex
             <h1 className="h1">{speciesLabel(bird.breed, bird.sex)}</h1>
             <span className="band mono">{bandId(id)}</span>
           </div>
-          <p className="muted">Sample bird on testnet.</p>
+          <p className="muted">Sample bird on testnet.{earlier > 0 ? " This bird had a sponsor before." : ""}</p>
           <dl className="traits">
             <div><dt>Plumage</dt><dd>{plumageName(bird.plumage)}</dd></div>
             <div><dt>Age</dt><dd>{ageLabel(Number(bird.bornAt), now)}</dd></div>
@@ -255,6 +337,7 @@ function WaitingBird({ id, bird, now }: { id: bigint; bird: { breed: number; sex
             </div>
           </section>
           <Link to="/eggs" className="btn btn-primary btn-block">Get an egg</Link>
+          {earlier > 0 ? <CareTimeline tokenId={id} total={earlier} now={now} /> : null}
         </div>
       </div>
     </div>

@@ -57,7 +57,7 @@ export function Coop() {
     .map((id, i) => ({ id, hatch: hatches.data?.[i]?.result }))
     .filter((h) => h.hatch && h.hatch.birdId === 0);
   const list = chickens.data ?? [];
-  const overdueCount = list.filter((c) => BigInt(now) > c.carePaidUntil).length;
+  const overdueCount = list.filter((c) => c.redeemedAt === 0n && BigInt(now) > c.carePaidUntil).length;
   const loading = isConnected && (eggs.isLoading || chickens.isLoading || hatchIds.isLoading);
   const empty = isConnected && !loading && eggCount === 0 && pending.length === 0 && list.length === 0;
 
@@ -129,16 +129,18 @@ export function Coop() {
           <div className="chicken-list">
             {list.map((c) => {
               const left = Number(c.carePaidUntil) - now;
-              const overdue = left < 0;
+              const collected = c.redeemedAt > 0n;
+              const requested = c.redeemRequestedAt > 0n;
+              const overdue = !collected && left < 0;
               return (
                 <Link key={String(c.tokenId)} to={`/chicken/${c.tokenId}`} className={`card chicken-card ${overdue ? "is-overdue" : ""}`}>
                   <span className="chicken-art"><BirdThumb breed={c.bird.breed} sex={c.bird.sex} plumage={c.bird.plumage} tokenId={c.tokenId} width={70} /></span>
                   <span className="chicken-meta">
                     <span className="strong">{speciesLabel(c.bird.breed, c.bird.sex)}</span>
                     <span className="mono muted small">{bandId(c.tokenId)}</span>
-                    <span className={`status ${overdue ? "status-bad" : "status-ok"}`}>
+                    <span className={`status ${overdue ? "status-bad" : requested ? "status-violet" : "status-ok"}`}>
                       {overdue ? <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1 L11.5 11 H0.5 Z" fill="currentColor" /></svg> : <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="currentColor" /></svg>}
-                      {overdue ? `Care overdue ${formatDuration(-left)}` : `Care paid, ${formatDuration(left)} left`}
+                      {collected ? "Collected" : requested ? "Collection requested" : overdue ? `Care overdue ${formatDuration(-left)}` : `Care paid, ${formatDuration(left)} left`}
                     </span>
                   </span>
                 </Link>

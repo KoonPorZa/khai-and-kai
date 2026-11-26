@@ -312,4 +312,68 @@ describe("local chain", () => {
     expect(await readKai("hasRole", [role, bob])).toBe(false);
     expect(zeroAddress).toBe("0x0000000000000000000000000000000000000000");
   });
+
+  async function hatchFor(who: Address): Promise<bigint> {
+    const id = await startHatch(who);
+    const h = (await readKai("hatch", [id])) as { revealBlock: bigint };
+    await mineUntilAfter(h.revealBlock);
+    await send(who, kaiCall("finishHatch", [id]));
+    return BigInt(((await readKai("hatch", [id])) as { birdId: number }).birdId);
+  }
+  const failure = (p: Promise<unknown>) =>
+    p.then(
+      () => undefined,
+      (e: unknown) => friendlyError(e),
+    );
+
+  it("collect: request blocks transfers, the farm confirms, then care and proofs are closed and the token moves freely", async () => {
+    const [, , , , , owner, buyer] = accounts as Address[];
+    const farm = accounts[0]!;
+    const token = await hatchFor(owner!);
+    await send(owner!, kaiCall("requestRedeem", [token]));
+    expect(await readKai("pendingRedeems")).toEqual([token]);
+    const blocked = await failure(pub.simulateContract({ address: kai, abi: kaiAbi, functionName: "transferFrom", args: [owner!, buyer!, token], account: owner! }));
+    expect(blocked?.title).toContain("collection request is already pending");
+
+    await send(farm, kaiCall("confirmRedeem", [token, recordHash("Handed over at the gate")]));
+    const ch = (await readKai("chicken", [token])) as { redeemedAt: bigint; redeemRequestedAt: bigint };
+    expect(ch.redeemedAt).toBeGreaterThan(0n);
+    expect(ch.redeemRequestedAt).toBe(0n);
+    expect(await readKai("pendingRedeems")).toEqual([]);
+
+    const pay = await failure(pub.simulateContract({ ...kaiCall("payCare", [token, 1n], CARE_FEE), account: owner! } as never));
+    expect(pay?.title).toContain("already been collected");
+    const proof = await failure(pub.simulateContract({ ...kaiCall("postCareProof", [token, 0, recordHash("x"), "n"]), account: farm } as never));
+    expect(proof?.title).toContain("already been collected");
+
+    await rpc("evm_increaseTime", [Number(CARE_PERIOD) * 10]);
+    await test.mine({ blocks: 1 });
+    expect(await readKai("isOverdue", [token])).toBe(false);
+    await send(owner!, { address: kai, abi: kaiAbi as Abi, functionName: "transferFrom", args: [owner!, buyer!, token] });
+    expect(getAddress((await readKai("ownerOf", [token])) as Address)).toBe(getAddress(buyer!));
+    expect(((await readKai("stats")) as { collected: bigint }).collected).toBe(1n);
+  });
+
+  it("release: a bird overdue for more than 3 periods goes back to the pool and can be hatched by someone else", async () => {
+    const [, , , , , , , owner, other] = accounts as Address[];
+    const farm = accounts[0]!;
+    const token = await hatchFor(owner!);
+    const early = await failure(pub.simulateContract({ ...kaiCall("release", [token]), account: farm } as never));
+    expect(early?.title).toContain("more than 3 periods");
+
+    await rpc("evm_increaseTime", [Number(CARE_PERIOD) * 4 + 10]);
+    await test.mine({ blocks: 1 });
+    expect(await readKai("isReleasable", [token])).toBe(true);
+    const poolBefore = (await readKai("poolSize")) as bigint;
+    await send(farm, kaiCall("release", [token]));
+    expect(await readKai("poolSize")).toBe(poolBefore + 1n);
+    await expect(pub.readContract({ address: kai, abi: kaiAbi, functionName: "ownerOf", args: [token] })).rejects.toThrow();
+    expect(((await readKai("bird", [token])) as { breed: number }).breed).toBeGreaterThanOrEqual(0);
+    expect(((await readKai("stats")) as { released: bigint }).released).toBe(1n);
+
+    const again = await hatchFor(other!); // the pool now includes the returned bird
+    expect(again).toBeGreaterThan(0n);
+    const s = (await readKai("stats")) as { poolSize: bigint };
+    expect(s.poolSize).toBe(poolBefore);
+  });
 });

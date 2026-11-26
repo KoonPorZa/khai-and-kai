@@ -31,6 +31,8 @@ const chickenOf = (tokenId: bigint, owner: string, paidUntilOffset: number, extr
   carePaidUntil: state.blockTimestamp + BigInt(paidUntilOffset),
   hatchId: 4n,
   proofCount: 0n,
+  redeemRequestedAt: 0n,
+  redeemedAt: 0n,
   ...extra,
 });
 
@@ -59,7 +61,7 @@ function deployedBasics() {
     MAX_CARE_PERIODS: () => 8760n,
     FARM_ROLE: () => `0x${"11".repeat(32)}`,
     hasRole: () => false,
-    stats: () => ({ birdsRegistered: 30n, poolSize: 26n, hatched: 3n, pendingHatches: 1n, careProofs: 5n }),
+    stats: () => ({ birdsRegistered: 30n, poolSize: 26n, hatched: 3n, pendingHatches: 1n, careProofs: 5n, collected: 0n, released: 0n }),
     tokenByIndex: ([i]: readonly unknown[]) => [4n, 9n, 12n][Number(i)],
   });
 }
@@ -409,5 +411,152 @@ describe("farm page", () => {
       functionName: "postCareProof",
       args: [42n, 1, keccak256(toBytes("Weighed 1.9 kg")), "Weight check"],
     });
+  });
+});
+
+describe("collect and release", () => {
+  const proofs = () => [{ at: state.blockTimestamp - 100n, kind: 0, contentHash: `0x${"aa".repeat(32)}`, note: "Morning feeding" }];
+  function chickenState(offset: number, extra: object = {}, owner: string = ME) {
+    deployedBasics();
+    state.account = { address: ME, chainId: 97 };
+    Object.assign(state.reads, {
+      chicken: () => chickenOf(4n, owner, offset, { proofCount: 1n, ...extra }),
+      hatch: () => ({ owner, revealBlock: 900n, birdId: 4, usedFallback: false }),
+      hatchProof: () => ["0x" + "22".repeat(32), 26n, 7n],
+      tokenURI: () => "data:application/json;base64,e30=",
+      careProofs: proofs,
+      releasableAt: () => state.blockTimestamp + 3600n,
+    });
+  }
+
+  it("offers Collect this bird to the owner of a paid bird and sends requestRedeem", async () => {
+    chickenState(2520);
+    show("/chicken/4");
+    expect(screen.getByText(/The farm hands over the real bird/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Collect this bird" }));
+    await waitFor(() => expect(actions.writeContract).toHaveBeenCalled());
+    expect(firstWrite()).toMatchObject({ functionName: "requestRedeem", args: [4n] });
+  });
+
+  it("does not offer collection to someone else", () => {
+    chickenState(2520, {}, "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC");
+    show("/chicken/4");
+    expect(screen.queryByRole("button", { name: "Collect this bird" })).toBeNull();
+  });
+
+  it("shows a pending request with the date, the transfer note and Cancel request", async () => {
+    chickenState(2520, { redeemRequestedAt: state.blockTimestamp - 60n });
+    show("/chicken/4");
+    expect(screen.getByText(/Collection requested on/)).toBeTruthy();
+    expect(screen.getByText(/Waiting for the farm to hand over the bird/)).toBeTruthy();
+    expect(screen.getByText(/cannot be transferred meanwhile/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Collect this bird" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel request" }));
+    await waitFor(() => expect(actions.writeContract).toHaveBeenCalled());
+    expect(firstWrite()).toMatchObject({ functionName: "cancelRedeem", args: [4n] });
+  });
+
+  it("shows a collected bird as the permanent record: no pay-care panel, care record kept", () => {
+    chickenState(-99999, { redeemedAt: state.blockTimestamp - 500n });
+    show("/chicken/4");
+    expect(screen.getByText(/Collected on/)).toBeTruthy();
+    expect(screen.getByText(/permanent record/)).toBeTruthy();
+    expect(screen.queryByText(/overdue/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Pay/ })).toBeNull();
+    expect(screen.queryByText("Care is paid")).toBeNull();
+    expect(screen.getByText("Morning feeding")).toBeTruthy();
+  });
+
+  it("tells an overdue sponsor when the farm may return the bird, and when it already can", () => {
+    chickenState(-900);
+    show("/chicken/4");
+    expect(screen.getByText(/The farm may return this bird to the coop after/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Collect this bird" })).toBeNull();
+    cleanup();
+    state.reads.releasableAt = () => state.blockTimestamp - 10n;
+    show("/chicken/4");
+    expect(screen.getByText("This bird can now be returned to the coop. Pay care to keep it.")).toBeTruthy();
+  });
+
+  it("marks a released bird that is waiting again, with its earlier care history", () => {
+    deployedBasics();
+    state.reads.chicken = () => {
+      throw new Error("ERC721NonexistentToken");
+    };
+    state.reads.bird = () => birdOf(2, 0, 1);
+    state.reads.careProofs = proofs;
+    show("/chicken/17");
+    expect(screen.getByText(/This bird had a sponsor before/)).toBeTruthy();
+    expect(screen.getByText("Morning feeding")).toBeTruthy();
+    expect(screen.getByText("This bird has no sponsor yet")).toBeTruthy();
+  });
+
+  it("shows Collection requested and Collected chips in My coop", () => {
+    deployedBasics();
+    state.account = { address: ME, chainId: 97 };
+    Object.assign(state.reads, {
+      balanceOf: () => 0n,
+      hatchesOf: () => [],
+      chickensOf: () => [
+        chickenOf(4n, ME, 1800, { redeemRequestedAt: state.blockTimestamp - 5n }),
+        chickenOf(9n, ME, -99999, { redeemedAt: state.blockTimestamp - 50n }),
+      ],
+    });
+    show("/coop");
+    expect(screen.getByText("Collection requested")).toBeTruthy();
+    expect(screen.getByText("Collected")).toBeTruthy();
+    expect(screen.queryByText(/Care overdue/)).toBeNull();
+  });
+
+  it("home: a collected state in the legend and the grid, the fourth how-it-works card, and the count", () => {
+    deployedBasics();
+    state.reads.stats = () => ({ birdsRegistered: 30n, poolSize: 26n, hatched: 3n, pendingHatches: 0n, careProofs: 5n, collected: 1n, released: 0n });
+    state.reads.chicken = ([id]) => chickenOf(id as bigint, ME, 100, id === 9n ? { redeemedAt: 5n } : {});
+    const { container } = show("/");
+    expect(container.querySelectorAll(".cell-collected")).toHaveLength(1);
+    expect(container.querySelectorAll(".cell-lit")).toHaveLength(2);
+    expect(screen.getByText("1 collected")).toBeTruthy();
+    expect(screen.getByLabelText("Open chicken KK-0009, collected")).toBeTruthy();
+    expect(screen.getByText("Collect, pass on, or let go")).toBeTruthy();
+    expect(screen.getByText(/1 bird collected/)).toBeTruthy();
+  });
+
+  it("farm: lists collection requests and confirms a handover only after an explicit second step", async () => {
+    deployedBasics();
+    state.reads.hasRole = () => true;
+    state.account = { address: FARM, chainId: 97 };
+    Object.assign(state.reads, {
+      pendingRedeems: () => [4n],
+      chicken: () => chickenOf(4n, ME, 1800, { redeemRequestedAt: state.blockTimestamp - 60n }),
+      isReleasable: () => false,
+    });
+    show("/farm");
+    expect(screen.getByText("Collection requests")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Handover record"), { target: { value: "Handed to the sponsor at the gate" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm handover" }));
+    expect(screen.getByText(/cannot be undone/)).toBeTruthy();
+    expect(actions.writeContract).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Yes, the bird was handed over" }));
+    await waitFor(() => expect(actions.writeContract).toHaveBeenCalled());
+    expect(firstWrite()).toMatchObject({ functionName: "confirmRedeem", args: [4n, keccak256(toBytes("Handed to the sponsor at the gate"))] });
+  });
+
+  it("farm: lists overdue birds past the release point and returns one after confirmation", async () => {
+    deployedBasics();
+    state.reads.hasRole = () => true;
+    state.account = { address: FARM, chainId: 97 };
+    Object.assign(state.reads, {
+      pendingRedeems: () => [],
+      isReleasable: ([id]: readonly unknown[]) => id === 9n,
+      chicken: () => chickenOf(9n, ME, -999999),
+    });
+    show("/farm");
+    expect(screen.getByText("Overdue birds")).toBeTruthy();
+    expect(screen.getByText(/No sponsor is waiting for a handover/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Return to the coop" }));
+    expect(screen.getByText(/burns the sponsor's token/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Yes, return it to the coop" }));
+    await waitFor(() => expect(actions.writeContract).toHaveBeenCalled());
+    expect(firstWrite()).toMatchObject({ functionName: "release", args: [9n] });
   });
 });

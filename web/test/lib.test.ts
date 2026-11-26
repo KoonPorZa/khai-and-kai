@@ -109,3 +109,20 @@ describe("user-facing error text", () => {
     expect(raw.detail).toBe("Boom");
   });
 });
+
+describe("collect and release error messages", () => {
+  it("explains the new contract errors in plain words", async () => {
+    const { BaseError, ContractFunctionRevertedError } = await import("viem");
+    const mk = (errorName: string) => {
+      const inner = new ContractFunctionRevertedError({ abi: [], functionName: "x", message: "x" });
+      Object.assign(inner, { data: { errorName, args: [] } });
+      const outer = new BaseError("failed", { cause: inner });
+      return friendlyError(outer);
+    };
+    expect(mk("RedeemPending").title).toMatch(/collection request is already pending/);
+    expect(mk("AlreadyRedeemed").title).toMatch(/already been collected/);
+    expect(mk("NotReleasable").title).toMatch(/more than 3 periods/);
+    expect(mk("NoRedeemRequest").title).toMatch(/no pending collection request/);
+    expect(mk("NotTokenOwner").title).toMatch(/Only the sponsor/);
+  });
+});

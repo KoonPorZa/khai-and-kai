@@ -4,6 +4,7 @@ import { useAccount } from "wagmi";
 import { kaiAbi } from "../abi/kai";
 import { Check } from "../components/Art";
 import { ActionButton, useConnectModal } from "../components/Wallet";
+import { CollectionRequests, OverdueBirds } from "../components/FarmQueues";
 import { deployment } from "../config/chains";
 import { useChicken, useFarmRole } from "../hooks/useChain";
 import { useTx } from "../hooks/useTx";
@@ -116,6 +117,9 @@ export function Farm() {
           <span>Care record posted for {bandId(posted)}. <Link to={`/chicken/${posted}`}>See it on the chicken's page</Link></span>
         </p>
       ) : null}
+
+      <CollectionRequests />
+      <OverdueBirds />
     </div>
   );
 }

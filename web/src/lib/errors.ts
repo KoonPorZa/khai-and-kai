@@ -35,6 +35,12 @@ const CONTRACT_MESSAGES: Record<string, string> = {
   InvalidBird: "That bird is not registered.",
   PoolExhausted: "No birds left in the coop.",
   AccessControlUnauthorizedAccount: "This wallet is not the farm account.",
+  NotTokenOwner: "Only the sponsor of this chicken can do that.",
+  RedeemPending: "A collection request is already pending for this chicken. It cannot be transferred meanwhile.",
+  NoRedeemRequest: "There is no pending collection request for this chicken.",
+  AlreadyRedeemed: "This bird has already been collected. Its care is closed.",
+  NotReleasable: "This bird cannot be returned to the coop yet: care must be overdue for more than 3 periods.",
+  TooManyPeriods: "That is more care periods than the contract accepts at once.",
   ERC1155InsufficientBalance: "You have no eggs to hatch.",
 };
 
