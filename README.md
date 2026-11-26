@@ -168,8 +168,11 @@ flowchart LR
 - **The 300 birds are invented sample data.** Their records are labelled as sample data, and no real animal is behind them.
 - **Testnet only.** The contracts and scripts refuse mainnet. Testnet tBNB has no value.
 - **No legal agreement.** Sponsorship has no legal agreement behind it yet.
-- **Test coverage.** The contracts have 32 passing tests. The web app was tested with scripted component tests, an end-to-end test against a local chain, and browser screenshots. Wallet flows (connect, switch network, signing) have not been driven in a real browser and need a real wallet.
-- **Not audited.** The contracts had an internal review only.
+- **Test coverage.** The contracts have 32 passing tests and the web app 53. The web app was tested with scripted component tests, an end-to-end test against a local chain, and browser screenshots. Wallet flows (connect, switch network, signing) have not been driven in a real browser and need a real wallet.
+- **The farm can register birds while hatches are pending.** Adding birds changes the pool size, so a farm that sees a pending hatch's block hash could shift which position it lands on. With no tiers there is nothing to gain; production should block registration while hatches are pending.
+- **One key holds both roles.** On testnet the deployer is both admin and farm. Production needs separate keys or a multisig, and a delay on replacing the renderer.
+- **Pause is partial.** Pausing stops egg sales and new hatches only. Pending hatches, care payments, care records and transfers keep working.
+- **Not professionally audited.** The contracts had an internal code review and an automated source-only security review, which found no vulnerabilities. Neither is a substitute for a professional audit.
 
 ## Roadmap
 
