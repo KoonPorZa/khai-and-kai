@@ -12,7 +12,8 @@ function onlyTestnetDeployments(): Plugin {
     transform(code, id) {
       if (LOCAL || !id.endsWith("deployments.json")) return null;
       const all = JSON.parse(code) as Record<string, unknown>;
-      const kept = all["97"] ? { "97": all["97"] } : {};
+      // KK_HIDE_DEPLOYMENT=1 builds the "not deployed yet" state on purpose (used to capture its screenshot).
+      const kept = all["97"] && process.env.KK_HIDE_DEPLOYMENT !== "1" ? { "97": all["97"] } : {};
       return { code: JSON.stringify(kept), map: null };
     },
   };

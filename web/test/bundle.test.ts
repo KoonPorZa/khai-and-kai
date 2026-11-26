@@ -26,6 +26,8 @@ describe("production bundle", () => {
     expect(js.toLowerCase()).not.toContain("59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
     expect(js).not.toContain("Local test wallet");
     expect(js).not.toContain("127.0.0.1:8545");
+    expect(js).not.toContain("?as=local");
+    expect(js.toLowerCase()).not.toContain("f39fd6e51aad88f6f4ce6ab8827279cffFb92266".toLowerCase());
   });
 
   it("targets BNB testnet and never asks for logs", () => {

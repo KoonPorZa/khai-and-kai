@@ -14,11 +14,14 @@ import "@fontsource/noto-sans-thai/thai-500.css";
 import "@fontsource/noto-sans-thai/thai-700.css";
 import "./styles.css";
 import { wagmiConfig } from "./config/wagmi";
+import { autoConnectLocal } from "./config/localWallet";
 import { ToastProvider } from "./components/Toast";
 import { WalletProvider } from "./components/Wallet";
 import { App } from "./App";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 2000, retry: 1, refetchOnWindowFocus: false } } });
+
+if (__LOCAL__) void autoConnectLocal(wagmiConfig);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

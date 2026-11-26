@@ -245,8 +245,8 @@ button.cell-lit:focus-visible { outline-offset: 1px; }
 .stepper button { width: 44px; height: 44px; background: var(--surface); border: 0; font-size: 20px; transition: background-color var(--t-fast) var(--ease); }
 .stepper button:hover:not(:disabled) { background: #1f2630; }
 .stepper button:disabled { opacity: 0.4; }
-.stepper input { width: 48px; height: 44px; text-align: center; background: var(--bg); border: 0; font: 600 16px var(--font-body); }
-.total { margin-left: auto; font-size: 14px; }
+.stepper input:not([type]) { flex: none; width: 48px; min-width: 0; height: 44px; padding: 0; border-radius: 0; text-align: center; background: var(--bg); border: 0; box-shadow: none; font: 600 16px var(--font-body); }
+.total { margin-left: auto; font-size: 14px; white-space: nowrap; }
 
 /* coop */
 .hatch-banner { flex-direction: row; align-items: center; background: var(--violet-bg); border-color: var(--violet); padding: 14px 16px; }
@@ -329,7 +329,7 @@ textarea { resize: vertical; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.hatch-stage { position: relative; width: min(300px, 78vw); aspect-ratio: 1 / 1; border-radius: 24px; background: #161b23; overflow: hidden; }
+.hatch-stage { position: relative; width: min(300px, 78vw); aspect-ratio: 1 / 1; border-radius: 24px; background: transparent; overflow: visible; }
 .hs-layer { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hs-egg { z-index: 1; transform-origin: 50% 82%; }
 .hs-glow { z-index: 2; pointer-events: none; opacity: 0.5; animation: kk-pulse 1.6s ease-in-out infinite; }
@@ -365,7 +365,7 @@ textarea { resize: vertical; }
 @media (min-width: 900px) {
   .hero-art {
     display: block; position: absolute; z-index: -1; inset: 0 -32px; width: calc(100% + 64px); height: 100%; object-fit: cover; object-position: 70% 40%; opacity: 0.2;
-    border-radius: 24px; -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent); mask-image: linear-gradient(to bottom, #000 45%, transparent);
+    -webkit-mask-image: radial-gradient(ellipse 60% 70% at 45% 40%, #000 25%, transparent 100%); mask-image: radial-gradient(ellipse 60% 70% at 45% 40%, #000 25%, transparent 100%);
   }
   body { font-size: 16px; }
   .topbar { padding: 20px 32px; }
@@ -374,7 +374,7 @@ textarea { resize: vertical; }
   .nav-bottom { display: none; }
   .page { padding: 8px 32px 40px; }
   .footer { padding: 8px 32px 28px; }
-  .banner { width: calc(100% - 64px); }
+  .banner { width: calc(100% - 64px); max-width: 1056px; }
   .toasts { bottom: 24px; }
   .desktop-only { display: inline-flex; }
   .h1 { font-size: 36px; }
@@ -397,7 +397,7 @@ textarea { resize: vertical; }
   .cols > * { flex: 1 1 0; min-width: 0; }
   .portrait { height: 420px; }
   .kv { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .footer-links { flex-direction: row; gap: 24px; flex-wrap: wrap; }
+  .footer-links { flex-direction: row; gap: 24px; flex-wrap: wrap; align-items: center; }
   .hatch-page { max-width: 560px; }
 }
 
@@ -406,3 +406,13 @@ textarea { resize: vertical; }
   .hs-glow { animation: none !important; }
 }
 .empty-art { width: min(100%, 320px); height: auto; border-radius: 14px; }
+
+/* The egg frames come with a square backdrop; keep only the egg outline so it wobbles on its own. */
+.hs-egg { -webkit-mask: var(--egg-mask) center / 100% 100% no-repeat; mask: var(--egg-mask) center / 100% 100% no-repeat; }
+:root { --egg-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'%3E%3Cpath d='M200 58 C128 58 88 157 96 240 C102 306 146 345 200 345 C254 345 298 306 304 240 C312 157 272 58 200 58Z'/%3E%3C/svg%3E"); }
+
+/* Breed illustration fills the portrait card */
+.portrait:has(> .portrait-img) { padding-top: 0; aspect-ratio: 1 / 1; min-height: 0; }
+.portrait > .portrait-img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; }
+.portrait > .chip { z-index: 2; }
+@media (min-width: 900px) { .portrait:has(> .portrait-img) { height: auto; } }

@@ -87,7 +87,8 @@ export function ChickenPage() {
   const left = Number(c.carePaidUntil) - now;
   const overdue = left < 0;
   const period = Number(carePeriod ?? 3600n);
-  const progress = overdue ? 100 : Math.round((1 - Math.min(left, period) / period) * 100);
+  // Share of the current period that has passed; with several periods paid ahead it counts within the one running now.
+  const progress = overdue ? 100 : Math.round((1 - (left % period || period) / period) * 100);
   const mine = !!address && address.toLowerCase() === c.owner.toLowerCase();
   const name = speciesLabel(c.bird.breed, c.bird.sex);
   const cap = Number(maxPeriods ?? 8760n);
