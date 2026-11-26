@@ -333,7 +333,7 @@ describe("local chain", () => {
     await send(owner!, kaiCall("requestRedeem", [token]));
     expect(await readKai("pendingRedeems")).toEqual([token]);
     const blocked = await failure(pub.simulateContract({ address: kai, abi: kaiAbi, functionName: "transferFrom", args: [owner!, buyer!, token], account: owner! }));
-    expect(blocked?.title).toContain("collection request is already pending");
+    expect(blocked?.title).toContain("collection request is pending");
 
     await send(farm, kaiCall("confirmRedeem", [token, recordHash("Handed over at the gate")]));
     const ch = (await readKai("chicken", [token])) as { redeemedAt: bigint; redeemRequestedAt: bigint };

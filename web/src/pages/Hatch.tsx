@@ -110,6 +110,27 @@ export function HatchPage() {
     );
   }
 
+  // A finished hatch is only "yours" while its bird is still with the hatch owner: after a release the token is gone,
+  // and after a transfer another sponsor holds it.
+  const returned = finishedToken !== undefined && revealedToken === undefined && chicken.isError;
+  const movedOn = finishedToken !== undefined && revealedToken === undefined && !!bird && !!hatch && bird.owner.toLowerCase() !== hatch.owner.toLowerCase();
+  if (returned || movedOn) {
+    return (
+      <div className="hatch-page">
+        <div className="stack narrow">
+          <h1 className="h1">Hatch #{String(id)}</h1>
+          <p className="muted">
+            {returned
+              ? `The bird from this hatch, ${bandId(finishedToken!)}, has returned to the coop. It is waiting for a new sponsor.`
+              : `The bird from this hatch, ${bandId(finishedToken!)}, is now with another sponsor.`}
+          </p>
+          <Link to={`/chicken/${finishedToken}`} className="btn btn-primary">See {bandId(finishedToken!)}</Link>
+          <Link to="/eggs" className="btn btn-ghost">Get an egg</Link>
+        </div>
+      </div>
+    );
+  }
+
   const done = showResult && bird;
   return (
     <div className="hatch-page">

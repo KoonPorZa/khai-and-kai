@@ -81,6 +81,12 @@ function RequestRow({ id, chicken, now, onDone }: { id: bigint; chicken: ReturnT
   const tx = useTx();
   const [record, setRecord] = useState("");
   const hash = recordHash(record);
+  const decline = useTx();
+  const declineRequest = async () => {
+    if (!deployment) return;
+    const receipt = await decline.run({ address: deployment.kai, abi: kaiAbi, functionName: "declineRedeem", args: [id] });
+    if (receipt) onDone();
+  };
   const confirm = async () => {
     if (!deployment) return;
     const receipt = await tx.run({ address: deployment.kai, abi: kaiAbi, functionName: "confirmRedeem", args: [id, hash] });
@@ -101,6 +107,7 @@ function RequestRow({ id, chicken, now, onDone }: { id: bigint; chicken: ReturnT
         <textarea id={`handover-${id}`} rows={2} value={record} onChange={(e) => setRecord(e.target.value)} placeholder="Who collected the bird, when, and how it was handed over" />
         <span className="mono small hash">{hash}</span>
       </div>
+      <div className="row">
       <ConfirmAction
         label="Confirm handover"
         warning={`This marks ${bandId(id)} as collected for good. Care fees, care records and release stop for this bird, and it can never return to the coop. It cannot be undone.`}
@@ -109,6 +116,14 @@ function RequestRow({ id, chicken, now, onDone }: { id: bigint; chicken: ReturnT
         disabled={record.trim().length === 0}
         onConfirm={confirm}
       />
+      <ConfirmAction
+        label="Decline"
+        warning={`This refuses the collection request for ${bandId(id)}. The request is cleared, the sponsor keeps the token, and normal care rules apply again. The sponsor can ask again while care is paid.`}
+        yes="Yes, decline the request"
+        busy={decline.busy}
+        onConfirm={declineRequest}
+      />
+      </div>
     </div>
   );
 }

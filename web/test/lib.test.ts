@@ -119,7 +119,7 @@ describe("collect and release error messages", () => {
       const outer = new BaseError("failed", { cause: inner });
       return friendlyError(outer);
     };
-    expect(mk("RedeemPending").title).toMatch(/collection request is already pending/);
+    expect(mk("RedeemPending").title).toMatch(/collection request is pending/);
     expect(mk("AlreadyRedeemed").title).toMatch(/already been collected/);
     expect(mk("NotReleasable").title).toMatch(/more than 3 periods/);
     expect(mk("NoRedeemRequest").title).toMatch(/no pending collection request/);

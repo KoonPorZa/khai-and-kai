@@ -541,6 +541,41 @@ describe("collect and release", () => {
     expect(firstWrite()).toMatchObject({ functionName: "confirmRedeem", args: [4n, keccak256(toBytes("Handed to the sponsor at the gate"))] });
   });
 
+  it("farm: a request can be declined after an explicit second step", async () => {
+    deployedBasics();
+    state.reads.hasRole = () => true;
+    state.account = { address: FARM, chainId: 97 };
+    Object.assign(state.reads, {
+      pendingRedeems: () => [4n],
+      chicken: () => chickenOf(4n, ME, 1800, { redeemRequestedAt: state.blockTimestamp - 60n }),
+      isReleasable: () => false,
+    });
+    show("/farm");
+    fireEvent.click(screen.getByRole("button", { name: "Decline" }));
+    expect(screen.getByText(/sponsor keeps the token/)).toBeTruthy();
+    expect(actions.writeContract).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Yes, decline the request" }));
+    await waitFor(() => expect(actions.writeContract).toHaveBeenCalled());
+    expect(firstWrite()).toMatchObject({ functionName: "declineRedeem", args: [4n] });
+  });
+
+  it("hatched screen: a hatch whose bird was released says it returned to the coop; one that moved on says so", () => {
+    deployedBasics();
+    state.account = { address: ME, chainId: 97 };
+    state.reads.hatch = () => ({ owner: ME, revealBlock: 900n, birdId: 4, usedFallback: false });
+    state.reads.hatchProof = () => ["0x" + "22".repeat(32), 26n, 7n];
+    state.reads.chicken = () => {
+      throw new Error("ERC721NonexistentToken");
+    };
+    show("/hatch/5");
+    expect(screen.getByText(/has returned to the coop/)).toBeTruthy();
+    expect(screen.queryByText("You are now the sponsor of")).toBeNull();
+    cleanup();
+    state.reads.chicken = () => chickenOf(4n, "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", 3000);
+    show("/hatch/5");
+    expect(screen.getByText(/is now with another sponsor/)).toBeTruthy();
+  });
+
   it("farm: lists overdue birds past the release point and returns one after confirmation", async () => {
     deployedBasics();
     state.reads.hasRole = () => true;
