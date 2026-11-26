@@ -10,7 +10,7 @@ BNB Bangkok hackathon, Developer Track, RWA theme.
 
 ## Why
 
-In Thailand people breed and collect ornamental chickens. Bantams and Seramas have beauty shows, a breeder quoted in the press says a show-quality bantam can sell for up to five times the price of an ordinary one, and hatching eggs from named bloodlines are sold online by the egg. What makes a bird valuable is its parentage, its age, how it was raised and whether it was sold twice, and that information lives in chat messages and a farm notebook. Khai & Kai puts the egg, the bird and its care record on-chain, where a buyer can read them and nobody can rewrite them.
+In Thailand people breed and collect ornamental chickens. Bantams and Seramas have beauty shows, a breeder quoted in the press says a show-quality bantam can sell for up to five times the price of an ordinary one, and breeders sell them online through Facebook pages and listing sites. What makes a bird valuable is its parentage, its age, how it was raised and whether it was sold twice, and that information lives in chat messages and a farm notebook. Khai & Kai puts the egg, the bird and its care record on-chain, where a buyer can read them and nobody can rewrite them.
 
 ## What it does
 
