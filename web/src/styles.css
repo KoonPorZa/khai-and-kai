@@ -241,6 +241,9 @@ button.cell-lit:focus-visible { outline-offset: 1px; }
 .pips { display: flex; gap: 6px; align-items: center; height: 36px; }
 .pip { width: 18px; height: 23px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; border: 2px solid var(--muted); transition: background-color 300ms var(--ease), border-color 300ms var(--ease); }
 .pip-used { background: var(--accent); border-color: var(--accent); }
+.pip { flex: none; }
+.quota-bar { height: 6px; margin: 8px 0 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.quota-bar span { display: block; height: 100%; border-radius: 999px; background: var(--accent); transition: width 300ms var(--ease); }
 .stepper { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .stepper button { width: 44px; height: 44px; background: var(--surface); border: 0; font-size: 20px; transition: background-color var(--t-fast) var(--ease); }
 .stepper button:hover:not(:disabled) { background: #1f2630; }

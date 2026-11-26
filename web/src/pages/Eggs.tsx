@@ -12,6 +12,9 @@ import { useTx } from "../hooks/useTx";
 import { clockTime, formatNative, nextQuotaReset } from "../lib/format";
 import { hatchIdFromReceipt } from "../lib/receipt";
 
+/** Above this many eggs a day, the quota shows as a number and a bar, not one pip per egg. */
+const MAX_PIPS = 6;
+
 export function Eggs() {
   const navigate = useNavigate();
   const toast = useToast();
@@ -86,12 +89,21 @@ export function Eggs() {
               <div className="muted tiny">one per bird waiting</div>
             </div>
             <div className="card tight">
-              <div className="muted small">Your eggs today</div>
-              <div className="pips" role="img" aria-label={isConnected ? `${bought} of ${limit} used` : "Connect a wallet to see your quota"}>
-                {Array.from({ length: limit }, (_, i) => (
-                  <span key={i} className={`pip ${i < bought ? "pip-used" : ""}`} />
-                ))}
-              </div>
+              <div className="muted small">{limit > MAX_PIPS ? "You can still buy today" : "Your eggs today"}</div>
+              {limit > MAX_PIPS ? (
+                <>
+                  <div className="stat">{isConnected ? Math.max(limit - bought, 0) : limit}</div>
+                  <div className="quota-bar" role="img" aria-label={isConnected ? `${bought} of ${limit} used` : "Connect a wallet to see your quota"}>
+                    <span style={{ width: `${isConnected ? Math.min((bought / limit) * 100, 100) : 0}%` }} />
+                  </div>
+                </>
+              ) : (
+                <div className="pips" role="img" aria-label={isConnected ? `${bought} of ${limit} used` : "Connect a wallet to see your quota"}>
+                  {Array.from({ length: limit }, (_, i) => (
+                    <span key={i} className={`pip ${i < bought ? "pip-used" : ""}`} />
+                  ))}
+                </div>
+              )}
               <div className="muted tiny">{isConnected ? `${bought} of ${limit} used, resets ${resetAt}` : `Up to ${limit} a day`}</div>
             </div>
           </div>
