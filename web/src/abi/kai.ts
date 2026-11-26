@@ -70,6 +70,17 @@ export const kaiAbi = [
         "type": "uint256"
       }
     ],
+    "name": "AlreadyRedeemed",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
     "name": "CareOverdue",
     "type": "error"
   },
@@ -224,6 +235,39 @@ export const kaiAbi = [
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "NoRedeemRequest",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "NotReleasable",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "NotTokenOwner",
+    "type": "error"
+  },
+  {
     "inputs": [],
     "name": "NoteTooLong",
     "type": "error"
@@ -236,6 +280,17 @@ export const kaiAbi = [
   {
     "inputs": [],
     "name": "PoolExhausted",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "RedeemPending",
     "type": "error"
   },
   {
@@ -506,6 +561,88 @@ export const kaiAbi = [
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "RedeemCancelled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "RedeemRequested",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "handoverHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "Redeemed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      }
+    ],
+    "name": "Released",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "address",
         "name": "renderer",
@@ -726,6 +863,19 @@ export const kaiAbi = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "RELEASE_AFTER_PERIODS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -819,6 +969,19 @@ export const kaiAbi = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "cancelRedeem",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -966,6 +1129,16 @@ export const kaiAbi = [
             "internalType": "uint256",
             "name": "proofCount",
             "type": "uint256"
+          },
+          {
+            "internalType": "uint64",
+            "name": "redeemRequestedAt",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint64",
+            "name": "redeemedAt",
+            "type": "uint64"
           }
         ],
         "internalType": "struct Kai.Chicken",
@@ -1044,6 +1217,16 @@ export const kaiAbi = [
             "internalType": "uint256",
             "name": "proofCount",
             "type": "uint256"
+          },
+          {
+            "internalType": "uint64",
+            "name": "redeemRequestedAt",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint64",
+            "name": "redeemedAt",
+            "type": "uint64"
           }
         ],
         "internalType": "struct Kai.Chicken[]",
@@ -1052,6 +1235,24 @@ export const kaiAbi = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "handoverHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "confirmRedeem",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -1318,6 +1519,25 @@ export const kaiAbi = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "isReleasable",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "khai",
     "outputs": [
@@ -1428,6 +1648,19 @@ export const kaiAbi = [
   },
   {
     "inputs": [],
+    "name": "pendingRedeems",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "poolSize",
     "outputs": [
       {
@@ -1508,6 +1741,38 @@ export const kaiAbi = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "releasableAt",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "release",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "renderer",
     "outputs": [
@@ -1534,6 +1799,19 @@ export const kaiAbi = [
       }
     ],
     "name": "renounceRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "requestRedeem",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1713,6 +1991,16 @@ export const kaiAbi = [
             "internalType": "uint256",
             "name": "careProofs",
             "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "collected",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "released",
+            "type": "uint256"
           }
         ],
         "internalType": "struct Kai.Stats",
@@ -1820,6 +2108,32 @@ export const kaiAbi = [
   {
     "inputs": [],
     "name": "totalCareProofs",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalCollected",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalReleased",
     "outputs": [
       {
         "internalType": "uint256",

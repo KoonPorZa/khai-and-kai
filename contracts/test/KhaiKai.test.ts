@@ -135,7 +135,7 @@ describe("Khai & Kai", () => {
       expect(await sys.kai.read.poolSize()).to.equal(0n);
       expect(await sys.kai.read.totalSupply()).to.equal(3n);
       const s = await sys.kai.read.stats();
-      expect(s).to.deep.equal({ birdsRegistered: 3n, poolSize: 0n, hatched: 3n, pendingHatches: 0n, careProofs: 0n });
+      expect(s).to.deep.equal({ birdsRegistered: 3n, poolSize: 0n, hatched: 3n, pendingHatches: 0n, careProofs: 0n, collected: 0n, released: 0n });
     });
   });
 
@@ -488,6 +488,190 @@ describe("Khai & Kai", () => {
     });
   });
 
+
+  describe("I8 collect the bird (redeem)", () => {
+    async function hatched() {
+      const sys = await loadFixture(bigPool);
+      const [a, b, c] = sys.users;
+      const { tokenId } = await hatchAndFinish(sys, a);
+      return { sys, a, b, c, tokenId };
+    }
+    const handover = keccak256("0x1234");
+
+    it("I8 only the owner can request, never while overdue, never twice; the request shows in the pending set and the Chicken record", async () => {
+      const { sys, a, b, tokenId } = await hatched();
+      await expect(sys.kai.write.requestRedeem([tokenId], { account: b.account })).to.be.rejectedWith("NotTokenOwner");
+      await sys.kai.write.requestRedeem([tokenId], { account: a.account });
+      const at = BigInt(await time.latest());
+      expect(await sys.kai.read.pendingRedeems()).to.deep.equal([tokenId]);
+      const ch = await sys.kai.read.chicken([tokenId]);
+      expect(ch.redeemRequestedAt).to.equal(at);
+      expect(ch.redeemedAt).to.equal(0n);
+      await expect(sys.kai.write.requestRedeem([tokenId], { account: a.account })).to.be.rejectedWith("RedeemPending");
+
+      const other = await hatchAndFinish(sys, b);
+      await time.increaseTo((await sys.kai.read.chicken([other.tokenId])).carePaidUntil + 1n);
+      await expect(sys.kai.write.requestRedeem([other.tokenId], { account: b.account })).to.be.rejectedWith("CareOverdue");
+      await expect(sys.kai.write.requestRedeem([9999n], { account: a.account })).to.be.rejected;
+    });
+
+    it("I8 cancel: only the owner, only with a request; transfers are blocked while pending and free after cancel", async () => {
+      const { sys, a, b, tokenId } = await hatched();
+      await expect(sys.kai.write.cancelRedeem([tokenId], { account: a.account })).to.be.rejectedWith("NoRedeemRequest");
+      await sys.kai.write.requestRedeem([tokenId], { account: a.account });
+      await expect(sys.kai.write.cancelRedeem([tokenId], { account: b.account })).to.be.rejectedWith("NotTokenOwner");
+      await expect(sys.kai.write.transferFrom([addr(a), addr(b), tokenId], { account: a.account })).to.be.rejectedWith("RedeemPending");
+      await sys.kai.write.cancelRedeem([tokenId], { account: a.account });
+      expect(await sys.kai.read.pendingRedeems()).to.deep.equal([]);
+      expect((await sys.kai.read.chicken([tokenId])).redeemRequestedAt).to.equal(0n);
+      await sys.kai.write.transferFrom([addr(a), addr(b), tokenId], { account: a.account });
+      expect(await sys.kai.read.ownerOf([tokenId])).to.equal(getAddress(addr(b)));
+    });
+
+    it("I8 confirm: only FARM_ROLE, only a pending request; the pending set swap-removes correctly", async () => {
+      const { sys, a, b, c, tokenId } = await hatched();
+      const t2 = (await hatchAndFinish(sys, b)).tokenId;
+      const t3 = (await hatchAndFinish(sys, c)).tokenId;
+      await expect(sys.kai.write.confirmRedeem([tokenId, handover], { account: sys.farm.account })).to.be.rejectedWith("NoRedeemRequest");
+      await sys.kai.write.requestRedeem([tokenId], { account: a.account });
+      await sys.kai.write.requestRedeem([t2], { account: b.account });
+      await sys.kai.write.requestRedeem([t3], { account: c.account });
+      await expect(sys.kai.write.confirmRedeem([tokenId, handover], { account: a.account })).to.be.rejectedWith("AccessControl");
+      await sys.kai.write.confirmRedeem([tokenId, handover], { account: sys.farm.account });
+      expect([...(await sys.kai.read.pendingRedeems())].sort()).to.deep.equal([t2, t3].sort());
+      await sys.kai.write.cancelRedeem([t2], { account: b.account });
+      expect(await sys.kai.read.pendingRedeems()).to.deep.equal([t3]);
+    });
+
+    it("I8 a collected bird has no overdue state, no care fee, no proofs, no release, free transfers, and shows as Collected", async () => {
+      const { sys, a, b, tokenId } = await hatched();
+      await sys.kai.write.requestRedeem([tokenId], { account: a.account });
+      await sys.kai.write.confirmRedeem([tokenId, handover], { account: sys.farm.account });
+      const at = BigInt(await time.latest());
+      const ch = await sys.kai.read.chicken([tokenId]);
+      expect(ch.redeemedAt).to.equal(at);
+      expect(ch.redeemRequestedAt).to.equal(0n);
+      expect((await sys.kai.read.stats()).collected).to.equal(1n);
+      expect(await sys.kai.read.pendingRedeems()).to.deep.equal([]);
+
+      await time.increase(CARE_PERIOD * 10n);
+      expect(await sys.kai.read.isOverdue([tokenId])).to.equal(false);
+      expect(await sys.kai.read.isReleasable([tokenId])).to.equal(false);
+      expect(await sys.kai.read.releasableAt([tokenId])).to.equal(0n);
+      await expect(sys.kai.write.payCare([tokenId, 1n], { account: a.account, value: CARE_FEE })).to.be.rejectedWith("AlreadyRedeemed");
+      await expect(sys.kai.write.postCareProof([tokenId, 0, `0x${"00".repeat(32)}`, "x"], { account: sys.farm.account })).to.be.rejectedWith("AlreadyRedeemed");
+      await expect(sys.kai.write.release([tokenId], { account: sys.farm.account })).to.be.rejectedWith("AlreadyRedeemed");
+      await expect(sys.kai.write.requestRedeem([tokenId], { account: a.account })).to.be.rejectedWith("AlreadyRedeemed");
+      await sys.kai.write.transferFrom([addr(a), addr(b), tokenId], { account: a.account });
+      expect(await sys.kai.read.ownerOf([tokenId])).to.equal(getAddress(addr(b)));
+      const json = JSON.parse(decodeDataUri(await sys.kai.read.tokenURI([tokenId]), "data:application/json;base64,"));
+      expect(json.attributes.find((x: { trait_type: string }) => x.trait_type === "Care status").value).to.equal("Collected");
+      await assertI1(sys);
+    });
+  });
+
+  describe("I9 return to the coop (release)", () => {
+    async function hatched() {
+      const sys = await loadFixture(bigPool);
+      const [a, b, c] = sys.users;
+      const { tokenId, hatchId } = await hatchAndFinish(sys, a);
+      return { sys, a, b, c, tokenId, hatchId };
+    }
+
+    it("I9 release needs FARM_ROLE and more than 3 overdue periods: not at the boundary, yes one second after", async () => {
+      const { sys, a, tokenId } = await hatched();
+      const until = (await sys.kai.read.chicken([tokenId])).carePaidUntil;
+      const at = until + 3n * CARE_PERIOD;
+      expect(await sys.kai.read.releasableAt([tokenId])).to.equal(at);
+      await time.increaseTo(until + 1n);
+      await expect(sys.kai.write.release([tokenId], { account: sys.farm.account })).to.be.rejectedWith("NotReleasable");
+      await time.increaseTo(at - 1n); // the next block lands exactly on the boundary
+      await expect(sys.kai.write.release([tokenId], { account: sys.farm.account })).to.be.rejectedWith("NotReleasable");
+      expect(await sys.kai.read.isReleasable([tokenId])).to.equal(false);
+      await time.increaseTo(at + 1n);
+      expect(await sys.kai.read.isReleasable([tokenId])).to.equal(true);
+      await expect(sys.kai.write.release([tokenId], { account: a.account })).to.be.rejectedWith("AccessControl");
+      await sys.kai.write.release([tokenId], { account: sys.farm.account });
+    });
+
+    it("I9 paying care before release removes the risk", async () => {
+      const { sys, a, tokenId } = await hatched();
+      const until = (await sys.kai.read.chicken([tokenId])).carePaidUntil;
+      await time.increaseTo(until + 3n * CARE_PERIOD);
+      await sys.kai.write.payCare([tokenId, 1n], { account: a.account, value: CARE_FEE });
+      await expect(sys.kai.write.release([tokenId], { account: sys.farm.account })).to.be.rejectedWith("NotReleasable");
+    });
+
+    it("I9 release burns the token, clears a pending request, returns the bird to the pool once, and I1 still holds", async () => {
+      const { sys, a, tokenId } = await hatched();
+      await sys.kai.write.requestRedeem([tokenId], { account: a.account });
+      const poolBefore = await sys.kai.read.poolSize();
+      const availableBefore = await sys.khai.read.eggsAvailable();
+      await time.increaseTo((await sys.kai.read.releasableAt([tokenId])) + 1n);
+      await sys.kai.write.release([tokenId], { account: sys.farm.account });
+
+      await expect(sys.kai.read.ownerOf([tokenId])).to.be.rejected;
+      expect(await sys.kai.read.balanceOf([addr(a)])).to.equal(0n);
+      expect(await sys.kai.read.totalSupply()).to.equal(0n);
+      expect(await sys.kai.read.pendingRedeems()).to.deep.equal([]);
+      expect(await sys.kai.read.poolSize()).to.equal(poolBefore + 1n);
+      expect(await sys.khai.read.eggsAvailable()).to.equal(availableBefore + 1n);
+      const s = await sys.kai.read.stats();
+      expect(s.released).to.equal(1n);
+      expect(s.hatched).to.equal(0n);
+      expect(await sys.kai.read.releasableAt([tokenId])).to.equal(0n);
+      expect(await sys.kai.read.isReleasable([tokenId])).to.equal(false);
+      await expect(sys.kai.write.release([tokenId], { account: sys.farm.account })).to.be.rejected;
+      await assertI1(sys);
+    });
+
+    it("I9 and I2: a released bird can be drawn again with the same token id, a fresh care period and the new hatch id; its history is kept", async () => {
+      const sys = await loadFixture(smallPool);
+      const [a, b, c, d] = sys.users;
+      // Hatch every bird so the pool is empty, then release one: the next draw has only that bird to give.
+      const first = await hatchAndFinish(sys, a);
+      await hatchAndFinish(sys, b);
+      await hatchAndFinish(sys, c);
+      expect(await sys.kai.read.poolSize()).to.equal(0n);
+      const tokenId = first.tokenId;
+      for (const [kind, note] of [[0, "Fed"], [2, "Weighed"]] as const) {
+        await sys.kai.write.postCareProof([tokenId, kind, `0x${"11".repeat(32)}`, note], { account: sys.farm.account });
+      }
+      await time.increaseTo((await sys.kai.read.releasableAt([tokenId])) + 1n);
+      await sys.kai.write.release([tokenId], { account: sys.farm.account });
+      expect(await sys.kai.read.poolSize()).to.equal(1n);
+      await assertI1(sys);
+
+      const again = await hatchAndFinish(sys, d);
+      expect(again.tokenId).to.equal(tokenId);
+      expect(again.hatchId).to.not.equal(first.hatchId);
+      const ch = await sys.kai.read.chicken([tokenId]);
+      expect(ch.owner).to.equal(getAddress(addr(d)));
+      expect(ch.hatchId).to.equal(again.hatchId);
+      expect(ch.carePaidUntil).to.equal(BigInt(await time.latest()) + CARE_PERIOD);
+      expect(ch.redeemedAt).to.equal(0n);
+      expect(ch.proofCount).to.equal(2n);
+      const proofs = await sys.kai.read.careProofs([tokenId, 0n, 10n]);
+      expect(proofs.map((p) => p.note)).to.deep.equal(["Weighed", "Fed"]);
+      // The first hatch record still names the bird; hatchProof of the first draw is unchanged.
+      expect((await sys.kai.read.hatch([first.hatchId])).birdId).to.equal(Number(tokenId));
+      expect(await sys.kai.read.poolSize()).to.equal(0n);
+      expect((await sys.kai.read.stats()).hatched).to.equal(3n);
+      await assertI1(sys);
+    });
+
+    it("pausing Kai does not stop collect or release", async () => {
+      const { sys, a, b, tokenId } = await hatched();
+      const t2 = (await hatchAndFinish(sys, b)).tokenId;
+      await sys.kai.write.pause({ account: sys.admin.account });
+      await sys.kai.write.requestRedeem([tokenId], { account: a.account });
+      await sys.kai.write.confirmRedeem([tokenId, keccak256("0x01")], { account: sys.farm.account });
+      await time.increaseTo((await sys.kai.read.releasableAt([t2])) + 1n);
+      await sys.kai.write.release([t2], { account: sys.farm.account });
+      expect(await sys.kai.read.poolSize()).to.equal(60n - 1n);
+    });
+  });
+
   describe("verify helper (lib/verifyHatch.ts)", () => {
     it("recomputes seed and index off-chain equal to the on-chain result, normal and fallback", async () => {
       const sys = await loadFixture(bigPool);
@@ -552,7 +736,7 @@ describe("Khai & Kai", () => {
       expect(attrs.Sex).to.equal(b.sex === 1 ? "Rooster" : "Hen");
       expect(attrs.Plumage).to.equal(await sys.renderer.read.plumageName([b.plumage]));
       expect(attrs.Band).to.equal(`KK-${tokenId.toString().padStart(4, "0")}`);
-      expect(attrs["Care status"]).to.equal("Active");
+      expect(attrs["Care status"]).to.equal("Paid");
       expect(attrs.Born).to.equal(b.bornAt);
       const svg = decodeDataUri(json.image, "data:image/svg+xml;base64,");
       assertWellFormedSvg(svg);
@@ -578,6 +762,7 @@ describe("Khai & Kai", () => {
             BigInt(breed * 2 + sex + 1),
             { breed, sex, plumage, bornAt: 1_700_000_000, recordHash: `0x${"ab".repeat(32)}` },
             BigInt(2 ** 40),
+            0n,
           ]);
           const json = JSON.parse(decodeDataUri(uri, "data:application/json;base64,"));
           assertWellFormedSvg(decodeDataUri(json.image, "data:image/svg+xml;base64,"));
@@ -601,6 +786,7 @@ describe("Khai & Kai", () => {
       const uri = await sys.renderer.read.chickenURI([
         7n,
         { breed: 4, sex: 1, plumage: 6, bornAt: 1_700_000_000, recordHash: `0x${"ab".repeat(32)}` },
+        0n,
         0n,
       ]);
       const json = JSON.parse(decodeDataUri(uri, "data:application/json;base64,"));

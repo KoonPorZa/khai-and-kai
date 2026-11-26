@@ -49,7 +49,7 @@ contract KaiRenderer {
 
     // ---------------------------------------------------------------- chicken
 
-    function chickenURI(uint256 tokenId, Kai.Bird calldata bird, uint64 carePaidUntil) external view returns (string memory) {
+    function chickenURI(uint256 tokenId, Kai.Bird calldata bird, uint64 carePaidUntil, uint64 redeemedAt) external view returns (string memory) {
         Kai.Bird calldata b = bird;
         _checkTraits(b.breed, b.sex, b.plumage);
         bool active = block.timestamp <= carePaidUntil;
@@ -70,7 +70,7 @@ contract KaiRenderer {
             ",",
             _attr("Band", band),
             ",",
-            _attr("Care status", active ? "Active" : "Overdue"),
+            _attr("Care status", redeemedAt != 0 ? "Collected" : active ? "Paid" : "Overdue"),
             ',{"trait_type":"Born","display_type":"date","value":',
             uint256(b.bornAt).toString(),
             '}],"image":"data:image/svg+xml;base64,',

@@ -120,6 +120,11 @@ export const rendererAbi = [
         "internalType": "uint64",
         "name": "carePaidUntil",
         "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "redeemedAt",
+        "type": "uint64"
       }
     ],
     "name": "chickenURI",

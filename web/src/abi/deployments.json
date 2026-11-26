@@ -47,10 +47,10 @@
       "hatchDelayBlocks": 2
     },
     "gas": {
-      "deploy KaiRenderer": "3203924",
+      "deploy KaiRenderer": "3218019",
       "deploy Khai": "2077010",
-      "deploy Kai": "3156064",
-      "Khai.setKai": "50979"
+      "deploy Kai": "3772634",
+      "Khai.setKai": "51067"
     }
   }
 }
