@@ -72,9 +72,9 @@ Network: BNB Smart Chain testnet, chain id 97. Explorer: https://testnet.bscscan
 
 | Contract | Address |
 | --- | --- |
-| Khai | [`0x2d30cb50c94387967123440c052EDc9372DA1383`](https://testnet.bscscan.com/address/0x2d30cb50c94387967123440c052EDc9372DA1383) ([Sourcify](https://repo.sourcify.dev/97/0x2d30cb50c94387967123440c052EDc9372DA1383)) |
-| Kai | [`0xb3f6a0dc452e3aB7eD4D2D003926b0F32964251F`](https://testnet.bscscan.com/address/0xb3f6a0dc452e3aB7eD4D2D003926b0F32964251F) ([Sourcify](https://repo.sourcify.dev/97/0xb3f6a0dc452e3aB7eD4D2D003926b0F32964251F)) |
-| KaiRenderer | [`0xd0B4AEDcAe73Efb51FE214D9DCc51910d332c1a2`](https://testnet.bscscan.com/address/0xd0B4AEDcAe73Efb51FE214D9DCc51910d332c1a2) ([Sourcify](https://repo.sourcify.dev/97/0xd0B4AEDcAe73Efb51FE214D9DCc51910d332c1a2)) |
+| Khai | [`0x19692f47324D07A6dF0144c9ebcA3f1A17D8cc5D`](https://testnet.bscscan.com/address/0x19692f47324D07A6dF0144c9ebcA3f1A17D8cc5D) ([Sourcify](https://repo.sourcify.dev/97/0x19692f47324D07A6dF0144c9ebcA3f1A17D8cc5D)) |
+| Kai | [`0xB387af0ad8b078ceb5349C5cBe38E6e5B0313EDC`](https://testnet.bscscan.com/address/0xB387af0ad8b078ceb5349C5cBe38E6e5B0313EDC) ([Sourcify](https://repo.sourcify.dev/97/0xB387af0ad8b078ceb5349C5cBe38E6e5B0313EDC)) |
+| KaiRenderer | [`0x1bB01e15b5A9f4d2D9c8f852AB9D746909726bD7`](https://testnet.bscscan.com/address/0x1bB01e15b5A9f4d2D9c8f852AB9D746909726bD7) ([Sourcify](https://repo.sourcify.dev/97/0x1bB01e15b5A9f4d2D9c8f852AB9D746909726bD7)) |
 
 ## Try it
 
