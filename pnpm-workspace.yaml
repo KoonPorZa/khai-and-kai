@@ -7,3 +7,4 @@ allowBuilds:
   keccak: true
   secp256k1: true
   utf-8-validate: false
+  workerd: false

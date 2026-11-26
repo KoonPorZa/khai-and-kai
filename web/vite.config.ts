@@ -19,7 +19,10 @@ function onlyTestnetDeployments(): Plugin {
   };
 }
 
-// Adds og:image / twitter:image once the illustrator's og image has been synced (see scripts/sync-art.mjs).
+// The one place the public address lives (override with VITE_SITE_URL). Social tags need absolute URLs.
+const SITE_URL = (process.env.VITE_SITE_URL ?? "https://khai-and-kai.koonporza-learn.workers.dev").replace(/\/$/, "");
+
+// Adds og:url, and og:image / twitter:image once the illustrator's og image has been synced (see scripts/sync-art.mjs).
 function socialPreview(): Plugin {
   return {
     name: "social-preview",
@@ -28,12 +31,15 @@ function socialPreview(): Plugin {
       const og = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as { og?: string | null }).og : null;
       const hero = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as { hero?: string | null }).hero : null;
       const preload = hero ? [{ tag: "link", attrs: { rel: "preload", as: "image", href: hero, media: "(min-width: 900px)" }, injectTo: "head" as const }] : [];
-      if (!og) return preload;
+      const url = { tag: "meta", attrs: { property: "og:url", content: `${SITE_URL}/` }, injectTo: "head" as const };
+      if (!og) return [...preload, url];
+      const image = `${SITE_URL}${og}`;
       return [
         ...preload,
-        { tag: "meta", attrs: { property: "og:image", content: og }, injectTo: "head" },
+        url,
+        { tag: "meta", attrs: { property: "og:image", content: image }, injectTo: "head" },
         { tag: "meta", attrs: { name: "twitter:card", content: "summary_large_image" }, injectTo: "head" },
-        { tag: "meta", attrs: { name: "twitter:image", content: og }, injectTo: "head" },
+        { tag: "meta", attrs: { name: "twitter:image", content: image }, injectTo: "head" },
       ];
     },
   };

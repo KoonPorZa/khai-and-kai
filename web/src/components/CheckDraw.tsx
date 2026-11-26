@@ -58,6 +58,9 @@ export function CheckDraw({ hatchId, revealBlock, usedFallback, seed, poolSizeAt
         <div><dt>Birds waiting then</dt><dd>{formatNumber(poolSizeAtFinish)}</dd></div>
         <div><dt>Position picked</dt><dd>{formatNumber(index + 1n)}</dd></div>
       </dl>
+      <p className="muted small">
+        Only the reveal block hash is cross-checked on two RPC endpoints. The hatch record and the stored seed are read from the RPC this page already uses.
+      </p>
       {usedFallback ? (
         <p className="notice small">
           Fallback draw. The reveal block hash was more than 256 blocks old when this hatch finished, so the contract used the hatch number and block number instead.
@@ -65,7 +68,7 @@ export function CheckDraw({ hatchId, revealBlock, usedFallback, seed, poolSizeAt
       ) : null}
       <div className="row">
         <button type="button" className="btn btn-outline" onClick={check} disabled={result.status === "running"}>
-          {result.status === "running" ? "Checking…" : "Check the draw"}
+          {result.status === "running" ? "Checking…" : result.status === "bad" || result.status === "error" ? "Check again" : "Check the draw"}
         </button>
       </div>
       <div className="check-result" role="status">
@@ -81,8 +84,8 @@ export function CheckDraw({ hatchId, revealBlock, usedFallback, seed, poolSizeAt
             <p className="muted small">Limit: whoever finished the hatch could see the block hash before sending the transaction. Which bird sat at that position is contract state at that block.</p>
           </div>
         ) : null}
-        {result.status === "bad" ? <p className="row nowrap bad-text"><Warn size={18} /><span>The recomputed draw does not match the contract. Do not trust this record.</span></p> : null}
-        {result.status === "error" ? <p className="row nowrap bad-text"><Warn size={18} /><span>{result.message}</span></p> : null}
+        {result.status === "bad" ? <p className="row nowrap bad-text"><Warn size={18} /><span>The recomputed draw does not match what this page read from the contract. A faulty or out-of-date RPC can cause that too, so use Check again before drawing conclusions.</span></p> : null}
+        {result.status === "error" ? <p className="row nowrap bad-text"><Warn size={18} /><span>{result.message} A faulty RPC can cause this; Check again to retry.</span></p> : null}
       </div>
     </section>
   );

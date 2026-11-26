@@ -221,6 +221,13 @@ describe("chicken page", () => {
     expect(screen.getByText(/Breed illustration|Drawn from its traits/)).toBeTruthy();
   });
 
+  it("survives a care period of zero", () => {
+    withChicken(2520);
+    state.reads.carePeriod = () => 0n;
+    show("/chicken/4");
+    expect(screen.getByText("Care is paid")).toBeTruthy();
+  });
+
   it("caps the periods the selector offers at MAX_CARE_PERIODS", () => {
     withChicken(2520);
     state.reads.MAX_CARE_PERIODS = () => 3n;
@@ -246,8 +253,10 @@ describe("chicken page", () => {
     expect(screen.getByText("How this bird was drawn")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Check the draw" }));
     // The mocked block hash cannot reproduce the recorded seed, so the page reports a mismatch instead of a pass.
-    await waitFor(() => expect(screen.getByText(/does not match the contract/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/does not match what this page read/)).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(/faulty or out-of-date RPC/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Check again" })).toBeTruthy();
     vi.unstubAllGlobals();
   });
 

@@ -86,7 +86,7 @@ export function ChickenPage() {
 
   const left = Number(c.carePaidUntil) - now;
   const overdue = left < 0;
-  const period = Number(carePeriod ?? 3600n);
+  const period = Number(carePeriod ?? 0n) > 0 ? Number(carePeriod) : 3600; // never divide by a zero period
   // Share of the current period that has passed; with several periods paid ahead it counts within the one running now.
   const progress = overdue ? 100 : Math.round((1 - (left % period || period) / period) * 100);
   const mine = !!address && address.toLowerCase() === c.owner.toLowerCase();
