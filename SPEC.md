@@ -11,10 +11,11 @@ A small, fully on-chain protocol that links one real farm chicken to one NFT and
 1. A farm registers real birds on-chain.
 2. A user buys an **egg** (Khai), then **hatches** it to become the sponsor of one registered bird, drawn at random, and receives its **chicken** NFT (Kai).
 3. The sponsor pays a recurring **care fee**; the farm posts **care proofs** against the bird. A chicken with overdue care cannot be transferred.
+4. The sponsorship ends in one of three ways: the sponsor **collects** the real bird and keeps the token as its record, **passes** the token on with the full record, or stops paying and the farm **returns the bird to the coop** for a new sponsor.
 
 There is no backend and no database. Contracts hold all state; the web app is static files that talk to the chain through the user's wallet and a public RPC.
 
-**Framing: sponsorship, not ownership.** The NFT proves you are the sponsor of that bird: you fund its care and see every care record. Legal ownership and physical redemption are roadmap items. Farm and ornamental chickens only: no fighting, no betting, no rarity tiers, no value linked to any contest.
+**Framing: sponsorship, not ownership.** The NFT proves you are the sponsor of that bird: you fund its care and see every care record. The sponsor can collect the real bird (section 4.6); a legal sponsorship or ownership agreement behind the token is a roadmap item. Farm and ornamental chickens only: no fighting, no betting, no rarity tiers, no value linked to any contest.
 
 ## 2. Glossary
 
@@ -67,6 +68,17 @@ Stated limitation: a caller can see the block hash before finishing and could ch
 ### 4.5 Farm
 - Web: one form, post a care proof (visible only to an address with `FARM_ROLE`).
 - Scripts: register birds, withdraw, set price, set care fee, pause.
+
+### 4.6 Collect the bird (redeem)
+1. The token owner calls `Kai.requestRedeem(tokenId)`. Care must not be overdue. While a request is pending the token cannot be transferred. The owner can call `cancelRedeem(tokenId)`.
+2. The farm hands the bird over and calls `Kai.confirmRedeem(tokenId, handoverHash)` (hash of the farm's handover record).
+3. The token stays with its owner as the bird's permanent record: status **Collected**. From then on there is no care fee, no overdue state, no new care proofs and no release; the token can be transferred freely, so the record travels with the bird. The bird never returns to the pool.
+4. The care clock keeps running while a request is pending. The farm may refuse by not confirming; that is an off-chain matter.
+
+### 4.7 Return to the coop (release)
+1. When care has been overdue for more than 3 full care periods (`block.timestamp > carePaidUntil + 3 × carePeriod`), the farm may call `Kai.release(tokenId)`.
+2. The token is burned, any pending redeem request is cleared, and the bird goes back into the pool, so a new sponsor can hatch it. Its care proofs stay with the bird (they are keyed by bird id), so the next sponsor sees the full history.
+3. Paying care at any time before the farm calls `release` removes the risk. A collected bird cannot be released.
 
 ## 5. Architecture
 
@@ -158,6 +170,24 @@ event CarePaid(uint256 indexed tokenId, address indexed payer, uint256 periods, 
 event CareProofPosted(uint256 indexed tokenId, uint8 kind, bytes32 contentHash, string note);
 // transfer of an overdue token reverts CareOverdue(tokenId)
 
+// ---------- Kai: redeem and release ----------
+uint256 constant RELEASE_AFTER_PERIODS = 3;
+function requestRedeem(uint256 tokenId);                 // owner; NotTokenOwner, CareOverdue, RedeemPending, AlreadyRedeemed
+function cancelRedeem(uint256 tokenId);                  // owner; NoRedeemRequest
+function confirmRedeem(uint256 tokenId, bytes32 handoverHash);   // FARM_ROLE; NoRedeemRequest
+function release(uint256 tokenId);                       // FARM_ROLE; NotReleasable, AlreadyRedeemed
+function releasableAt(uint256 tokenId) view returns (uint64);    // carePaidUntil + 3 × carePeriod; 0 if collected or no token
+function isReleasable(uint256 tokenId) view returns (bool);
+function pendingRedeems() view returns (uint256[] memory);       // token ids with a pending request
+// struct Chicken gains: uint64 redeemRequestedAt; uint64 redeemedAt;
+// struct Stats gains: uint256 collected; uint256 released;
+// KaiRenderer.chickenURI gains a `uint64 redeemedAt` argument; the "Care status" attribute reads Paid, Overdue or Collected
+event RedeemRequested(uint256 indexed tokenId, address indexed owner);
+event RedeemCancelled(uint256 indexed tokenId, address indexed owner);
+event Redeemed(uint256 indexed tokenId, address indexed owner, bytes32 handoverHash);
+event Released(uint256 indexed tokenId, address indexed previousOwner);
+// transfer while a redeem request is pending reverts RedeemPending(tokenId); payCare and postCareProof on a collected token revert AlreadyRedeemed(tokenId)
+
 // ---------- KaiRenderer ----------
 function chickenURI(uint256 tokenId, Kai.Bird calldata bird, uint64 carePaidUntil) view returns (string memory);
 function eggURI() view returns (string memory);
@@ -171,12 +201,14 @@ Roles (OpenZeppelin `AccessControl`, on both Khai and Kai): `DEFAULT_ADMIN_ROLE`
 ## 7. Invariants (each needs a test)
 
 - **I1** `Khai.totalSupply(EGG) + Kai.pendingHatches() ≤ Kai.poolSize()`. Every egg and every pending hatch can always finish.
-- **I2** `tokenId == birdId`; a bird leaves the pool exactly once and is never minted twice.
+- **I2** `tokenId == birdId`. A bird is either in the pool or backs exactly one live token, never both and never two tokens. It leaves the pool once per sponsorship (it can return only through release, I9).
 - **I3** A hatch finishes at most once. Its seed depends only on `hatchId`, `revealBlock` and that block's hash.
 - **I4** The daily quota holds across `buy` and `buyAndStartHatch`, and across split purchases.
 - **I5** Each contract's balance equals payments received minus withdrawals; only `FARM_ROLE` withdraws.
 - **I6** Only Kai burns eggs for hatching; only Khai calls `startHatchFor`; only `FARM_ROLE` registers birds and posts proofs.
 - **I7** A token cannot be transferred while overdue, and can be again once care is paid.
+- **I8** Redeem: only the owner can request or cancel, only `FARM_ROLE` can confirm, and only a pending request can be confirmed. A pending request blocks transfers. A collected token has no care fee, cannot be released, cannot receive care proofs, and its bird is never in the pool.
+- **I9** Release: only `FARM_ROLE`, only after more than 3 overdue periods, never for a collected token. After release the token does not exist, the bird is in the pool exactly once, and I1 still holds. A released bird can be hatched again and gets the same token id.
 
 ## 8. Web app
 
@@ -185,8 +217,8 @@ Roles (OpenZeppelin `AccessControl`, on both Khai and Kai): `DEFAULT_ADMIN_ROLE`
 | `/` | What it is, live counters from `stats()`, how it works in three steps, call to action |
 | `/eggs` | Price, eggs left, today's quota, "Buy and hatch" and "Buy to keep" |
 | `/coop` | My eggs (hatch), pending hatches (finish), my chickens with care status |
-| `/chicken/:id` | Breed portrait, on-chain token art, traits, band id, hatch record + Verify, care status, pay care, care timeline |
-| `/farm` | Post a care proof (farm address only) |
+| `/chicken/:id` | Breed portrait, on-chain token art, traits, band id, hatch record + Check the draw, care status, pay care, care timeline, collect the bird (request, cancel, collected state), and when overdue the time after which the farm may return it to the coop |
+| `/farm` | Farm address only: post a care proof, confirm collection requests, return long-overdue birds to the coop |
 
 **Design: "Night Coop".** Dark only. Tokens: background `#0e1116`, surface `#161b23`, line `#262c36`, text `#f2f4f7`, muted `#8c95a3`, accent (BNB yellow) `#f0b90b`, violet `#7c5cff`, mint (ok) `#4fe3a1`, coral (overdue) `#ff7a6b`. Display face Space Grotesk, body Inter, numbers and addresses IBM Plex Mono, Thai glyphs ไข่ / ไก่ as a logo element (Noto Sans Thai). Mobile first, English UI. The on-chain SVG uses the same palette. Reference mock: the "C · Night Coop" board the owner picked.
 
@@ -202,9 +234,11 @@ Roles (OpenZeppelin `AccessControl`, on both Khai and Kai): `DEFAULT_ADMIN_ROLE`
 **Phase 1 — RWA (must finish):** everything above.
 
 **Phase 2 — only if time is left, in this order:**
-1. Release: after 3 overdue periods the farm can return the bird to the pool and burn the token.
-2. Redeem: the sponsor requests the real bird; the farm confirms on-chain.
+1. Breeding: a collected or sponsored bird's own eggs enter the system as new eggs that record their parents.
+2. Show results recorded on the bird's record (no betting, no fight results).
 3. AI agent that reads care proofs and flags gaps (the track's second theme).
+
+Redeem (4.6) and release (4.7) moved into phase 1 on 26 Nov 2026 at the owner's request, to close the loop: egg → chicken → collect, pass on, or return to the coop.
 
 **Out of scope:** marketplace, auctions, mainnet, stablecoins, KYC, VRF, multiple farms, light theme, Thai UI, any backend.
 
