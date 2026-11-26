@@ -47,7 +47,7 @@ export const th: Record<keyof typeof en, string> = {
   "eggs.limitReached": "วันนี้คุณใช้ครบ {limit} ฟองแล้ว โควตารีเซ็ตเวลา {time}",
   "eggs.buyHatch": "ซื้อและฟักเลย",
   "eggs.starting": "กำลังเริ่มฟัก…",
-  "eggs.twoConfirm": "ยืนยันในกระเป๋าสองครั้ง: ครั้งแรกซื้อและเริ่มฟัก ครั้งที่สองเปิดผลไก่ของคุณ",
+  "eggs.twoConfirm": "ยืนยันในกระเป๋าสองครั้ง: ครั้งแรกซื้อและเริ่มฟัก ครั้งที่สองเปิดผล",
   "eggs.keepTitle": "หรือเก็บไข่ไว้ฟักทีหลัง",
   "eggs.quantity": "จำนวน",
   "eggs.fewer": "ลดหนึ่งฟอง",

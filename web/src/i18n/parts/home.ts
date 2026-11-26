@@ -26,7 +26,7 @@ export const en = {
   "home.step4Body": "Collect the real bird from the farm and keep the token as its record, pass the token on to someone else, or stop paying: after a long lapse the farm may return the bird to the coop for a new sponsor.",
 } as const;
 export const th: Record<keyof typeof en, string> = {
-  "home.title": "อุปถัมภ์ไก่ฟาร์มตัวจริง ตั้งแต่ไข่จนถึงเล้า",
+  "home.title": "อุปถัมภ์ไก่ตัวจริงจากฟาร์ม ตั้งแต่ไข่จนถึงเล้า",
   "home.lede": "Khai แปลว่าไข่ Kai แปลว่าไก่ ซื้อไข่ ฟัก แล้วไก่ที่ลงทะเบียนไว้หนึ่งตัวจะเป็นไก่ที่คุณอุปถัมภ์ ทุกมื้ออาหารและการตรวจสุขภาพบันทึกไว้บนเชนทั้งหมด",
   "home.getEgg": "ซื้อไข่",
   "home.readContracts": "อ่านสัญญา",
@@ -44,11 +44,11 @@ export const th: Record<keyof typeof en, string> = {
   "home.collectedMany": " รับไก่แล้ว {n} ตัว",
   "home.how": "ใช้งานอย่างไร",
   "home.step1Title": "ซื้อไข่",
-  "home.step1Body": "{price} {symbol} จำกัดต่อวัน {limit} ฟอง และไข่ไม่เคยเกินจำนวนไก่ในเล้ากลาง",
+  "home.step1Body": "ฟองละ {price} {symbol} ซื้อได้วันละ {limit} ฟอง และจำนวนไข่ไม่เกินจำนวนไก่ในเล้ากลาง",
   "home.step2Title": "ฟักไข่",
   "home.step2Body": "hash ของ block เป็นตัวสุ่มไก่ให้คุณ ไม่มีไก่ตัวใดถูกสุ่มซ้ำ และคุณตรวจผลสุ่มเองได้",
   "home.step3Title": "ดูแลต่อเนื่อง",
   "home.step3Body": "จ่ายค่าเลี้ยง{fee} ทุกรอบ ฟาร์มจะบันทึกสิ่งที่ทำ ไก่ที่ค้างค่าเลี้ยงจะโอนไม่ได้",
-  "home.step4Title": "ขอรับ ส่งต่อ หรือปล่อยไป",
-  "home.step4Body": "ขอรับไก่ตัวจริงจากฟาร์มและเก็บโทเคนไว้เป็นบันทึก ส่งต่อโทเคนให้คนอื่น หรือหยุดจ่าย: หากค้างนานฟาร์มอาจคืนไก่เข้าเล้ากลางให้ผู้อุปถัมภ์รายใหม่",
+  "home.step4Title": "ขอรับไก่ ส่งต่อ หรือคืนเล้า",
+  "home.step4Body": "ขอรับไก่ตัวจริงจากฟาร์มและเก็บโทเคนไว้เป็นบันทึก ส่งต่อโทเคนให้คนอื่น หรือหยุดจ่าย ซึ่งถ้าค้างนาน ฟาร์มอาจคืนไก่เข้าเล้ากลางเพื่อรอผู้อุปถัมภ์รายใหม่",
 };
