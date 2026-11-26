@@ -8,13 +8,36 @@ BNB Bangkok hackathon, Developer Track, RWA theme.
 
 ![A night coop lit by a lantern, with one egg in the foreground nest](design/art/hero.webp)
 
+## Why
+
+In Thailand people breed and collect ornamental chickens. Bantams and Seramas have beauty shows, a breeder quoted in the press says a show-quality bantam can sell for up to five times the price of an ordinary one, and hatching eggs from named bloodlines are sold online by the egg. What makes a bird valuable is its parentage, its age, how it was raised and whether it was sold twice, and that information lives in chat messages and a farm notebook. Khai & Kai puts the egg, the bird and its care record on-chain, where a buyer can read them and nobody can rewrite them.
+
 ## What it does
 
 1. **Egg.** Pay 0.001 tBNB for an egg. Each wallet can buy 20 eggs per UTC day.
 2. **Hatch.** Hatching draws one bird at random from the farm's pool of registered birds. You receive that bird's chicken token (an ERC-721). One bird backs exactly one token.
 3. **Care.** You pay a recurring care fee (0.001 tBNB per period; the period is 1 hour on testnet and 30 days in production). The farm posts care proofs (feeding, health check, weight, vaccination, photo, note) against the bird, and they show as a timeline. A chicken with overdue care cannot be transferred until care is paid.
 
-**Sponsorship, not ownership.** The token shows that you are the sponsor of that bird: you fund its care and see every care record. It does not give legal ownership of the animal or a right to collect it. Both are on the roadmap.
+Then one of these happens:
+
+- **Collect the real bird.** The sponsor requests collection (care must not be overdue). The farm hands the bird over and confirms on-chain with a hash of its handover record. The token stays with the sponsor as the bird's permanent record. Care fees stop, the token can be transferred freely, and it is never released. The farm can decline a request, and the sponsor can cancel it. While a request is pending the token cannot be transferred.
+- **Pass the token on.** Transfer the token to someone else, and the care record goes with it.
+- **Stop paying.** After care has been overdue for more than 3 periods, the farm can return the bird to the coop. The token is burned and the bird goes back into the pool with its care history, so the next sponsor sees it. The farm cannot return a bird while a collection request is pending; it must decline the request first.
+
+```mermaid
+stateDiagram-v2
+  [*] --> InCoop: farm registers the bird
+  InCoop --> Hatching: egg bought and hatch started
+  Hatching --> Sponsored: hatch finished, token minted
+  Sponsored --> Overdue: care period lapses
+  Overdue --> Sponsored: care paid
+  Sponsored --> CollectionRequested: sponsor requests collection
+  CollectionRequested --> Sponsored: sponsor cancels or farm declines
+  CollectionRequested --> Collected: farm confirms handover
+  Overdue --> InCoop: more than 3 periods overdue, farm returns the bird
+```
+
+**Sponsorship, not ownership.** The token shows that you are the sponsor of that bird: you fund its care and see every care record. Collection is a request that the farm can decline, and no legal agreement backs it yet, so the token does not give legal ownership of the animal.
 
 **Animal welfare.** The birds are farm and ornamental breeds. There is no fighting, no betting, no rarity tiers, and no value linked to any contest. Every bird is equal in price and in what it gets.
 
@@ -25,7 +48,7 @@ BNB Bangkok hackathon, Developer Track, RWA theme.
 | Contract | Role |
 | --- | --- |
 | `Khai` | ERC-1155 egg (token id 1). Sells eggs, enforces the daily quota, holds the egg payments. |
-| `Kai` | ERC-721 chicken. Bird registry and pool, hatch (commit-reveal), care fees, care proofs, transfer lock. |
+| `Kai` | ERC-721 chicken. Bird registry and pool, hatch (commit-reveal), care fees, care proofs, transfer lock, collection and return to the coop. |
 | `KaiRenderer` | Builds each token's SVG image and JSON metadata on-chain. The admin can replace it. |
 
 Code is in `contracts/contracts/`. Solidity 0.8.26, OpenZeppelin Contracts 5.
@@ -35,12 +58,14 @@ Code is in `contracts/contracts/`. Solidity 0.8.26, OpenZeppelin Contracts 5.
 Each one has a test.
 
 - **I1** Eggs in circulation plus pending hatches never exceed the pool, so every egg and every pending hatch can finish.
-- **I2** Token id equals bird id. A bird leaves the pool once and is never minted twice.
+- **I2** Token id equals bird id. A bird is either in the pool or backs exactly one live token, never both and never two tokens. It leaves the pool once per sponsorship and returns only through release (I9).
 - **I3** A hatch finishes at most once. Its seed depends only on the hatch id, the reveal block and that block's hash.
 - **I4** The daily quota holds across both purchase paths and across split purchases.
 - **I5** Each contract's balance equals payments received minus withdrawals, and only the farm role withdraws.
 - **I6** Only `Kai` burns eggs for hatching, only `Khai` starts a hatch for a buyer, and only the farm role registers birds and posts care proofs.
 - **I7** A token cannot be transferred while its care is overdue, and can be again once care is paid.
+- **I8** Only the token owner can request or cancel collection, only the farm role can confirm or decline it, and only a pending request can be confirmed. A pending request blocks transfers. A collected token has no care fee, cannot be released, cannot receive care proofs, and its bird is never in the pool.
+- **I9** Only the farm role can release a bird, only after more than 3 overdue periods, never while a request is pending and never for a collected token. After a release the token does not exist, the bird is in the pool exactly once, and I1 still holds. A released bird can be hatched again and gets the same token id.
 
 ### The hatch draw
 
@@ -87,6 +112,9 @@ You need a browser wallet (MetaMask, Rabby, Trust or Binance Wallet) and some tB
 5. Open your chicken from the Coop page. You see its breed portrait, its on-chain token art, its traits and its leg-band id.
 6. Pay care on the chicken page and watch the status and deadline change.
 7. Press Check the draw to recompute the seed and pool position from the block hash.
+8. Press Collect this bird on the chicken page to request collection. You can cancel the request.
+
+The farm side needs the farm wallet, which is the deployer wallet on testnet: confirming a handover, declining a request, returning an overdue bird to the coop and posting care records. A judge without that wallet can read these states but cannot trigger them. On the local setup below, open the dev server with `?as=farm` to use the deployer account, which holds the farm role, so the whole loop can be tried there.
 
 Optional checks: buy more than 20 eggs on the same UTC day and the app shows the quota message; let the 1-hour care period lapse and the chicken shows Overdue and cannot be transferred.
 
@@ -131,7 +159,7 @@ VITE_LOCAL=1 pnpm --filter web dev
 
 Open http://127.0.0.1:5173.
 
-Web checks (50 tests) and the static build:
+Web checks (over 70 tests) and the static build:
 
 ```sh
 pnpm --filter web typecheck
@@ -167,27 +195,30 @@ flowchart LR
 - **Check the draw proves the position, not the pool contents.** It shows that the seed comes from the block hash and that the position is `seed % pool size`. The pool size and position are read from the contract. Which bird sat at that position depends on the pool at that moment, which only an archive node can show.
 - **The 300 birds are invented sample data.** Their records are labelled as sample data, and no real animal is behind them.
 - **Testnet only.** The contracts and scripts refuse mainnet. Testnet tBNB has no value.
-- **No legal agreement.** Sponsorship has no legal agreement behind it yet.
-- **Test coverage.** The contracts have 32 passing tests and the web app 53. The web app was tested with scripted component tests, an end-to-end test against a local chain, and browser screenshots. Wallet flows (connect, switch network, signing) have not been driven in a real browser and need a real wallet.
+- **No legal agreement.** Sponsorship has no legal agreement behind it yet. Collection is a request the farm can decline, and nothing enforces a handover.
+- **Test coverage.** The contracts have 47 passing tests and the web app over 70. The web app was tested with scripted component tests, an end-to-end test against a local chain, and browser screenshots. Wallet flows (connect, switch network, signing) have not been driven in a real browser and need a real wallet.
 - **The farm can register birds while hatches are pending.** Adding birds changes the pool size, so a farm that sees a pending hatch's block hash could shift which position it lands on. With no tiers there is nothing to gain; production should block registration while hatches are pending.
 - **One key holds both roles.** On testnet the deployer is both admin and farm. Production needs separate keys or a multisig, and a delay on replacing the renderer.
+- **Release can be avoided cheaply.** Paying one period just before the release point makes the chicken current again, so a sponsor can avoid release without settling the arrears.
+- **The admin can change the care fee at any time.** On testnet that is one key.
+- **The farm changes the pool size while hatches are pending.** Besides registering birds, returning a bird to the coop adds one to the pool, with the same effect on pending draws.
 - **Pause is partial.** Pausing stops egg sales and new hatches only. Pending hatches, care payments, care records and transfers keep working.
 - **Not professionally audited.** The contracts had an internal code review and an automated source-only security review, which found no vulnerabilities. Neither is a substitute for a professional audit.
 
 ## Roadmap
 
-Phase 2, in this order:
+Redeem (collect) and release (return to the coop) are built; see What it does.
 
-1. **Release.** After 3 overdue periods the farm can return the bird to the pool and burn the token.
-2. **Redeem.** The sponsor requests the real bird and the farm confirms on-chain.
-3. **Care AI agent.** An agent reads care proofs and flags gaps.
+Next:
 
-After that:
+1. **Breeding.** A bird's own eggs enter the system and record their parents. This closes the loop egg, chicken, parent, egg.
+2. **Show results.** Results from shows are recorded on the bird's record. No betting.
+3. **VRF.** A VRF for the hatch draw, replacing the block hash.
+4. **Legal agreement.** A legal sponsorship agreement between sponsor and farm, covering collection.
+5. **Multiple farms.** Each with its own role and pool.
+6. **Care AI agent.** An agent that reads care proofs and flags gaps.
 
-- A VRF for the hatch draw, replacing the block hash.
-- A legal sponsorship agreement between sponsor and farm.
-- Multiple farms, each with its own role and pool.
-- Stable-value payments, so egg price and care fee do not move with the BNB price.
+Also planned: stable-value payments, so egg price and care fee do not move with the BNB price.
 
 ## Prior work
 
