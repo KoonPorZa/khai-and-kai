@@ -78,5 +78,10 @@ export const actions = {
   writeContract: vi.fn(async () => `0x${"cd".repeat(32)}`),
   waitForTransactionReceipt: vi.fn(async () => ({ status: "success", logs: [] })),
   estimateGas: vi.fn(async () => 100_000n),
+  readContract: vi.fn(async (_config: unknown, p: { functionName: string; args?: readonly unknown[] }) => {
+    const r = read(p.functionName, p.args);
+    if (r.isError || r.data === undefined) throw new Error("reverted");
+    return r.data;
+  }),
   getBlock: vi.fn(async () => ({ hash: `0x${"ab".repeat(32)}` })),
 };

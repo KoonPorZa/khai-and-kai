@@ -9,12 +9,15 @@ import weight from "../assets/brand/weight.svg?raw";
 import vaccination from "../assets/brand/vaccination.svg?raw";
 import photo from "../assets/brand/photo.svg?raw";
 import note from "../assets/brand/note.svg?raw";
+import { useT } from "../i18n";
 import { breedName, plumageName, sexName } from "../lib/format";
 
 const EGG_OUTLINE = "M200 58 C128 58 88 157 96 240 C102 306 146 345 200 345 C254 345 298 306 304 240 C312 157 272 58 200 58Z";
 
 /** The illustrator's egg frame, cut to the egg's outline so its square backdrop does not show. */
-export function EggSvg({ width = 132, cracked = false, label = "An egg" }: { width?: number; cracked?: boolean; label?: string }) {
+export function EggSvg({ width = 132, cracked = false, label }: { width?: number; cracked?: boolean; label?: string }) {
+  const t = useT();
+  label = label ?? t("art.egg");
   return (
     <svg width={width} height={(width * 300) / 250} viewBox="75 48 250 300" role={label ? "img" : undefined} aria-label={label || undefined} aria-hidden={label ? undefined : true}>
       <defs>
@@ -50,7 +53,8 @@ export function BirdGlyph({ breed, sex, plumage, tokenId, width = 70, label }: {
 
 /** The breed illustration when the illustrator has delivered it, otherwise the kit drawing enlarged. */
 export function BreedPortrait({ breed, sex, plumage, tokenId }: { breed: number; sex: number; plumage: number; tokenId?: number | bigint }) {
-  const label = `Breed portrait: a ${plumageName(plumage).toLowerCase()} ${breedName(breed)} ${sexName(sex)}`;
+  const t = useT();
+  const label = t("art.portrait", { plumage: plumageName(plumage).toLowerCase(), breed: breedName(breed), sex: sexName(sex) });
   const src = artManifest.breeds[String(breed)];
   if (src) return <img className="portrait-img" src={src} width={768} height={768} alt={label} decoding="async" />;
   return <BirdGlyph breed={breed} sex={sex} plumage={plumage} tokenId={tokenId} width={280} label={label} />;

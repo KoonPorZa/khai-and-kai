@@ -540,7 +540,7 @@ describe("collect and release", () => {
     });
     show("/farm");
     expect(screen.getByText("Collection requests")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Handover record"), { target: { value: "Handed to the sponsor at the gate" } });
+    fireEvent.change(screen.getByLabelText("Handover form number or reference"), { target: { value: "Handed to the sponsor at the gate" } });
     fireEvent.click(screen.getByRole("button", { name: "Confirm handover" }));
     expect(screen.getByText(/cannot be undone/)).toBeTruthy();
     expect(actions.writeContract).not.toHaveBeenCalled();
@@ -582,6 +582,94 @@ describe("collect and release", () => {
     state.reads.chicken = () => chickenOf(4n, "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", 3000);
     show("/hatch/5");
     expect(screen.getByText(/is now with another sponsor/)).toBeTruthy();
+  });
+
+  function farmRequestSetup() {
+    deployedBasics();
+    state.reads.hasRole = () => true;
+    state.account = { address: FARM, chainId: 97 };
+    Object.assign(state.reads, {
+      pendingRedeems: () => [4n],
+      chicken: () => chickenOf(4n, ME, 1800, { redeemRequestedAt: 100n }),
+      isReleasable: () => false,
+    });
+  }
+  const withToasts = (path: string) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <ToastProvider>
+          <App />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+
+  it("farm: the handover field asks for a reference, never personal details, and so does the care-record field", () => {
+    farmRequestSetup();
+    show("/farm");
+    expect(screen.getByLabelText("Handover form number or reference")).toBeTruthy();
+    expect(screen.getByPlaceholderText("e.g. form no. 2026-0042")).toBeTruthy();
+    expect(screen.getAllByText(/Do not type names or contact details\. The fingerprint of this text is public\./).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("farm: the second step is disabled and refuses when the record is empty, including when cleared after the prompt opened", async () => {
+    farmRequestSetup();
+    show("/farm");
+    const field = screen.getByLabelText("Handover form number or reference");
+    fireEvent.change(field, { target: { value: "form 2026-0042" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm handover" }));
+    const yes = screen.getByRole("button", { name: "Yes, the bird was handed over" }) as HTMLButtonElement;
+    expect(yes.disabled).toBe(false);
+    fireEvent.change(field, { target: { value: "   " } });
+    expect((screen.getByRole("button", { name: "Yes, the bird was handed over" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Yes, the bird was handed over" }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(actions.writeContract).not.toHaveBeenCalled();
+  });
+
+  it("farm: a changed request (owner or request time) aborts confirm and decline with a plain message", async () => {
+    for (const change of ["owner", "requestedAt", "gone"] as const) {
+      cleanup();
+      actions.writeContract.mockClear();
+      farmRequestSetup();
+      withToasts("/farm");
+      fireEvent.change(screen.getByLabelText("Handover form number or reference"), { target: { value: "form 1" } });
+      fireEvent.click(screen.getByRole("button", { name: "Confirm handover" }));
+      // The token changes after the prompt opened.
+      state.reads.chicken =
+        change === "owner"
+          ? () => chickenOf(4n, "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", 1800, { redeemRequestedAt: 100n })
+          : change === "requestedAt"
+            ? () => chickenOf(4n, ME, 1800, { redeemRequestedAt: 200n })
+            : () => chickenOf(4n, ME, 1800, { redeemRequestedAt: 0n });
+      fireEvent.click(screen.getByRole("button", { name: "Yes, the bird was handed over" }));
+      await waitFor(() => expect(screen.getByText("This request changed. Review it again.")).toBeTruthy());
+      expect(actions.writeContract).not.toHaveBeenCalled();
+    }
+    cleanup();
+    farmRequestSetup();
+    withToasts("/farm");
+    fireEvent.click(screen.getByRole("button", { name: "Decline" }));
+    state.reads.chicken = () => chickenOf(4n, ME, 1800, { redeemRequestedAt: 300n });
+    fireEvent.click(screen.getByRole("button", { name: "Yes, decline the request" }));
+    await waitFor(() => expect(screen.getByText("This request changed. Review it again.")).toBeTruthy());
+    expect(actions.writeContract).not.toHaveBeenCalled();
+  });
+
+  it("farm: returning a bird to the coop aborts if its owner or care deadline changed after the prompt opened", async () => {
+    deployedBasics();
+    state.reads.hasRole = () => true;
+    state.account = { address: FARM, chainId: 97 };
+    Object.assign(state.reads, {
+      pendingRedeems: () => [],
+      isReleasable: ([id]: readonly unknown[]) => id === 9n,
+      chicken: () => chickenOf(9n, ME, -999999),
+    });
+    withToasts("/farm");
+    fireEvent.click(screen.getByRole("button", { name: "Return to the coop" }));
+    state.reads.chicken = () => chickenOf(9n, ME, 5000); // the sponsor paid care meanwhile
+    fireEvent.click(screen.getByRole("button", { name: "Yes, return it to the coop" }));
+    await waitFor(() => expect(screen.getByText("This request changed. Review it again.")).toBeTruthy());
+    expect(actions.writeContract).not.toHaveBeenCalled();
   });
 
   it("farm: lists overdue birds past the release point and returns one after confirmation", async () => {
