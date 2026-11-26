@@ -10,7 +10,7 @@ BNB Bangkok hackathon, Developer Track, RWA theme.
 
 ## What it does
 
-1. **Egg.** Pay 0.01 tBNB for an egg. Each wallet can buy 3 eggs per UTC day.
+1. **Egg.** Pay 0.001 tBNB for an egg. Each wallet can buy 20 eggs per UTC day.
 2. **Hatch.** Hatching draws one bird at random from the farm's pool of registered birds. You receive that bird's chicken token (an ERC-721). One bird backs exactly one token.
 3. **Care.** You pay a recurring care fee (0.001 tBNB per period; the period is 1 hour on testnet and 30 days in production). The farm posts care proofs (feeding, health check, weight, vaccination, photo, note) against the bird, and they show as a timeline. A chicken with overdue care cannot be transferred until care is paid.
 
@@ -88,7 +88,7 @@ You need a browser wallet (MetaMask, Rabby, Trust or Binance Wallet) and some tB
 6. Pay care on the chicken page and watch the status and deadline change.
 7. Press Check the draw to recompute the seed and pool position from the block hash.
 
-Optional checks: buy a fourth egg on the same UTC day and the app shows the quota message; let the 1-hour care period lapse and the chicken shows Overdue and cannot be transferred.
+Optional checks: buy more than 20 eggs on the same UTC day and the app shows the quota message; let the 1-hour care period lapse and the chicken shows Overdue and cannot be transferred.
 
 ## Run locally
 

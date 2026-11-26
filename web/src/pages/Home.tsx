@@ -59,7 +59,7 @@ function HowItWorks() {
   const egg = useEggInfo();
   const care = useCareParams();
   const steps = [
-    ["Get an egg", `${egg.price !== undefined ? formatNative(egg.price) : "0.01"} ${nativeSymbol}. Up to ${egg.dailyLimit !== undefined ? String(egg.dailyLimit) : "3"} a day, and never more eggs than birds in the coop.`],
+    ["Get an egg", `${egg.price !== undefined ? formatNative(egg.price) : "0.001"} ${nativeSymbol}. Up to ${egg.dailyLimit !== undefined ? String(egg.dailyLimit) : "20"} a day, and never more eggs than birds in the coop.`],
     ["Hatch it", "A block hash picks your bird. No bird is drawn twice, and you can check the draw yourself."],
     ["Keep it cared for", `Pay the care fee${care.careFee !== undefined ? ` (${formatNative(care.careFee)} ${nativeSymbol})` : ""} each period. The farm posts what it did. A chicken with unpaid care can't change hands.`],
   ] as const;

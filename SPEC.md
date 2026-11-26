@@ -46,7 +46,7 @@ The UI calls things **Egg** and **Chicken**. Khai and Kai are the brand and the 
 ### 4.2 Get an egg
 - **Buy and hatch (default button):** `Khai.buyAndStartHatch()` with `msg.value = price`. No egg token is minted; a hatch starts for the caller. One wallet confirmation.
 - **Buy to keep:** `Khai.buy(qty)` with `msg.value = price × qty` mints eggs. Eggs are transferable.
-- Limits: 3 eggs per wallet per UTC day (both paths count); eggs can never be sold beyond the pool (invariant I1).
+- Limits: 20 eggs per wallet per UTC day (both paths count); eggs can never be sold beyond the pool (invariant I1).
 
 ### 4.3 Hatch (commit–reveal)
 1. `Kai.startHatch()` burns one of the caller's eggs (or the buy-and-hatch path does the same without an egg). It records `revealBlock = block.number + 2` and reserves one bird's worth of pool capacity.
@@ -166,7 +166,7 @@ function breedName(uint8) pure returns (string memory); function plumageName(uin
 
 Roles (OpenZeppelin `AccessControl`, on both Khai and Kai): `DEFAULT_ADMIN_ROLE`, `FARM_ROLE`. The constructors take `admin` and `farm` addresses; on testnet both are the deployer.
 
-**Testnet parameters:** egg price 0.01 tBNB · care fee 0.001 tBNB · care period 3600 s · daily limit 3 · hatch delay 2 blocks.
+**Testnet parameters:** egg price 0.001 tBNB · care fee 0.001 tBNB · care period 3600 s · daily limit 20 · hatch delay 2 blocks. (Deployed with price 0.01 and limit 3; the owner changed both on 26 Nov 2026 with `setPrice` and `setDailyLimit` so visitors can try more hatches.)
 
 ## 7. Invariants (each needs a test)
 
@@ -213,7 +213,7 @@ Roles (OpenZeppelin `AccessControl`, on both Khai and Kai): `DEFAULT_ADMIN_ROLE`
 - [ ] Contracts deployed and verified on chain 97; addresses in the README
 - [ ] I1–I7 covered by passing tests
 - [ ] A new wallet can connect, buy and hatch with two confirmations, and see the chicken in the app and in the explorer with its on-chain art
-- [ ] The 4th egg of the day is rejected with a clear message
+- [ ] An egg beyond the daily limit is rejected with a clear message
 - [ ] Check the draw recomputes the same seed and pool position from the block hash
 - [ ] A hatch left past 256 blocks still finishes, marked as fallback
 - [ ] Care can be paid; an overdue chicken shows Overdue and cannot be transferred; a posted care proof appears on the timeline

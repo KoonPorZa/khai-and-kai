@@ -12,9 +12,9 @@ import {
 } from "./lib/common";
 
 // Testnet parameters (SPEC section 6).
-const PRICE = parseEther("0.01");
+const PRICE = parseEther("0.001");
 const CARE_FEE = parseEther("0.001");
-const DAILY_LIMIT = 3n;
+const DAILY_LIMIT = 20n;
 const DEFAULT_CARE_PERIOD = 3600n;
 
 /**

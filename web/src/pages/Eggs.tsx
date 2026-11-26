@@ -75,7 +75,7 @@ export function Eggs() {
               <EggSvg width={132} />
             </div>
             <div className="price">
-              <span className="price-num">{price !== undefined ? formatNative(price) : "0.01"}</span>
+              <span className="price-num">{price !== undefined ? formatNative(price) : "0.001"}</span>
               <span className="muted">{nativeSymbol} each</span>
             </div>
           </section>
