@@ -102,7 +102,7 @@ export function Farm() {
         <div className="field">
           <label htmlFor="rec">Farm record to fingerprint</label>
           <textarea id="rec" rows={3} value={record} onChange={(e) => setRecord(e.target.value)} />
-          <span className="muted small">Only a fingerprint of this text goes on-chain, so the paper record can be checked against it later.</span>
+          <span className="muted small">Only a fingerprint of this text goes on-chain, so the paper record can be checked against it later. Do not type names or contact details. The fingerprint of this text is public.</span>
           <span className="mono small hash">{hash}</span>
         </div>
 

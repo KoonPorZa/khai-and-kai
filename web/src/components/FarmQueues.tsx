@@ -1,24 +1,37 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useReadContract, useReadContracts } from "wagmi";
+import { useConfig, useReadContract, useReadContracts } from "wagmi";
+import { readContract } from "wagmi/actions";
 import type { Address } from "viem";
 import { kaiAbi } from "../abi/kai";
 import { ActionButton } from "./Wallet";
 import { deployment, targetChain } from "../config/chains";
 import { useSponsoredIds, useStats } from "../hooks/useChain";
 import { useTx } from "../hooks/useTx";
+import { useToast } from "./Toast";
 import { recordHash } from "../lib/hash";
 import { bandId, formatWhen, shortHex, speciesLabel } from "../lib/format";
 import { useChainNow } from "../hooks/useChainNow";
 
 const chainId = targetChain.id;
 
-/** A button that explains an irreversible action first and only then sends it. */
-function ConfirmAction({ label, warning, yes, busy, disabled, onConfirm }: { label: string; warning: string; yes: string; busy: boolean; disabled?: boolean; onConfirm: () => void }) {
+/**
+ * A button that explains an irreversible action first and only then sends it.
+ * `onOpen` runs when the prompt opens (the row remembers what it showed); `onConfirm` may return "abort" to close the prompt without sending.
+ */
+function ConfirmAction({ label, warning, yes, busy, disabled, yesDisabled, onOpen, onConfirm }: { label: string; warning: string; yes: string; busy: boolean; disabled?: boolean; yesDisabled?: boolean; onOpen?: () => void; onConfirm: () => Promise<"abort" | void> }) {
   const [asking, setAsking] = useState(false);
   if (!asking) {
     return (
-      <button type="button" className="btn btn-outline" disabled={disabled || busy} onClick={() => setAsking(true)}>
+      <button
+        type="button"
+        className="btn btn-outline"
+        disabled={disabled || busy}
+        onClick={() => {
+          onOpen?.();
+          setAsking(true);
+        }}
+      >
         {label}
       </button>
     );
@@ -27,7 +40,16 @@ function ConfirmAction({ label, warning, yes, busy, disabled, onConfirm }: { lab
     <div className="stack tight-gap" role="group" aria-label={`Confirm: ${label}`}>
       <p className="notice small">{warning}</p>
       <div className="row">
-        <ActionButton variant="coral" busy={busy} onClick={onConfirm}>
+        <ActionButton
+          variant="coral"
+          busy={busy}
+          disabled={yesDisabled}
+          onClick={() => {
+            void onConfirm().then((r) => {
+              if (r === "abort") setAsking(false);
+            });
+          }}
+        >
           {busy ? "Sending…" : yes}
         </ActionButton>
         <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setAsking(false)}>
@@ -37,6 +59,23 @@ function ConfirmAction({ label, warning, yes, busy, disabled, onConfirm }: { lab
     </div>
   );
 }
+
+type TokenView = { owner: string; redeemRequestedAt: bigint; redeemedAt: bigint; carePaidUntil: bigint };
+const sameOwner = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
+/** Re-reads one chicken right before a farm action; undefined when the token is gone. */
+function useFreshChicken() {
+  const config = useConfig();
+  return async (id: bigint): Promise<TokenView | undefined> => {
+    try {
+      return (await readContract(config, { address: deployment!.kai, abi: kaiAbi, functionName: "chicken", args: [id], chainId })) as TokenView;
+    } catch {
+      return undefined;
+    }
+  };
+}
+
+const CHANGED = "This request changed. Review it again.";
 
 function useChickens(ids: readonly bigint[]) {
   const contracts = useMemo(
@@ -79,16 +118,32 @@ export function CollectionRequests() {
 
 function RequestRow({ id, chicken, now, onDone }: { id: bigint; chicken: ReturnType<ReturnType<typeof useChickens>>; now: number; onDone: () => void }) {
   const tx = useTx();
+  const toast = useToast();
+  const fresh = useFreshChicken();
   const [record, setRecord] = useState("");
+  const [shown, setShown] = useState<{ owner: string; requestedAt: bigint } | undefined>();
   const hash = recordHash(record);
+  const remember = () => setShown(chicken ? { owner: chicken.owner, requestedAt: chicken.redeemRequestedAt } : undefined);
   const decline = useTx();
-  const declineRequest = async () => {
+  /** Aborts (returns false) unless the request is still exactly what the prompt showed. */
+  const unchanged = async () => {
+    const now = await fresh(id);
+    const ok = !!shown && !!now && sameOwner(now.owner, shown.owner) && now.redeemRequestedAt === shown.requestedAt && now.redeemRequestedAt > 0n && now.redeemedAt === 0n;
+    if (!ok) {
+      toast("error", CHANGED);
+      onDone();
+    }
+    return ok;
+  };
+  const declineRequest = async (): Promise<"abort" | void> => {
     if (!deployment) return;
+    if (!(await unchanged())) return "abort";
     const receipt = await decline.run({ address: deployment.kai, abi: kaiAbi, functionName: "declineRedeem", args: [id] });
     if (receipt) onDone();
   };
-  const confirm = async () => {
-    if (!deployment) return;
+  const confirm = async (): Promise<"abort" | void> => {
+    if (!deployment || record.trim().length === 0) return;
+    if (!(await unchanged())) return "abort";
     const receipt = await tx.run({ address: deployment.kai, abi: kaiAbi, functionName: "confirmRedeem", args: [id, hash] });
     if (receipt) onDone();
   };
@@ -103,8 +158,9 @@ function RequestRow({ id, chicken, now, onDone }: { id: bigint; chicken: ReturnT
         </div>
       </div>
       <div className="field">
-        <label htmlFor={`handover-${id}`}>Handover record</label>
-        <textarea id={`handover-${id}`} rows={2} value={record} onChange={(e) => setRecord(e.target.value)} placeholder="Who collected the bird, when, and how it was handed over" />
+        <label htmlFor={`handover-${id}`}>Handover form number or reference</label>
+        <textarea id={`handover-${id}`} rows={2} value={record} onChange={(e) => setRecord(e.target.value)} placeholder="e.g. form no. 2026-0042" />
+        <span className="muted small">Do not type names or contact details. The fingerprint of this text is public.</span>
         <span className="mono small hash">{hash}</span>
       </div>
       <div className="row">
@@ -114,6 +170,8 @@ function RequestRow({ id, chicken, now, onDone }: { id: bigint; chicken: ReturnT
         yes="Yes, the bird was handed over"
         busy={tx.busy}
         disabled={record.trim().length === 0}
+        yesDisabled={record.trim().length === 0}
+        onOpen={remember}
         onConfirm={confirm}
       />
       <ConfirmAction
@@ -121,6 +179,7 @@ function RequestRow({ id, chicken, now, onDone }: { id: bigint; chicken: ReturnT
         warning={`This refuses the collection request for ${bandId(id)}. The request is cleared, the sponsor keeps the token, and normal care rules apply again. The sponsor can ask again while care is paid.`}
         yes="Yes, decline the request"
         busy={decline.busy}
+        onOpen={remember}
         onConfirm={declineRequest}
       />
       </div>
@@ -159,8 +218,17 @@ export function OverdueBirds() {
 function ReleaseRow({ id, chicken, onDone }: { id: bigint; chicken: ReturnType<ReturnType<typeof useChickens>>; onDone: () => void }) {
   const tx = useTx();
   const now = useChainNow();
-  const release = async () => {
+  const toast = useToast();
+  const fresh = useFreshChicken();
+  const [shown, setShown] = useState<{ owner: string; paidUntil: bigint; requestedAt: bigint } | undefined>();
+  const release = async (): Promise<"abort" | void> => {
     if (!deployment) return;
+    const current = await fresh(id);
+    if (!shown || !current || !sameOwner(current.owner, shown.owner) || current.carePaidUntil !== shown.paidUntil || current.redeemedAt !== 0n || current.redeemRequestedAt !== shown.requestedAt) {
+      toast("error", CHANGED);
+      onDone();
+      return "abort";
+    }
     const receipt = await tx.run({ address: deployment.kai, abi: kaiAbi, functionName: "release", args: [id] });
     if (receipt) onDone();
   };
@@ -177,6 +245,7 @@ function ReleaseRow({ id, chicken, onDone }: { id: bigint; chicken: ReturnType<R
         warning={`This burns the sponsor's token for ${bandId(id)} and puts the bird back in the pool for a new sponsor. Its care records stay with the bird. It cannot be undone.`}
         yes="Yes, return it to the coop"
         busy={tx.busy}
+        onOpen={() => setShown(chicken ? { owner: chicken.owner, paidUntil: chicken.carePaidUntil, requestedAt: chicken.redeemRequestedAt } : undefined)}
         onConfirm={release}
       />
     </div>
