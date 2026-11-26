@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Khai & Kai home, desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@500;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+body{margin:0}
+a{color:#f0b90b;text-decoration:none}a:hover{color:#ffd23f}
+</style>
+</helmet>
+<div style="min-height: 1040px; box-sizing: border-box; background: #0e1116; color: #f2f4f7; font-family: Inter, system-ui, sans-serif; font-size: 16px; line-height: 1.5">
+<div style="max-width: 1120px; margin: 0 auto; padding: 0 32px; box-sizing: border-box; display: flex; flex-direction: column">
+
+<div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap; padding: 20px 0">
+<a href="DesktopHome.dc.html" style="display: flex; align-items: baseline; gap: 8px; color: #f2f4f7; font-family: 'Space Grotesk', Inter, sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.01em">Khai &amp; Kai <span style="font-family: 'Noto Sans Thai', sans-serif; font-weight: 500; font-size: 14px; color: #f0b90b">ไข่ ไก่</span></a>
+<nav aria-label="Main" style="display: flex; gap: 4px; margin-left: 16px">
+<a href="DesktopHome.dc.html" aria-current="page" style="min-height: 44px; padding: 0 14px; display: flex; align-items: center; border-radius: 10px; background: #161b23; color: #f0b90b; font-weight: 600; font-size: 15px">Home</a>
+<a href="Eggs.dc.html" style="min-height: 44px; padding: 0 14px; display: flex; align-items: center; border-radius: 10px; color: #8c95a3; font-weight: 500; font-size: 15px">Eggs</a>
+<a href="Coop.dc.html" style="min-height: 44px; padding: 0 14px; display: flex; align-items: center; border-radius: 10px; color: #8c95a3; font-weight: 500; font-size: 15px">My coop</a>
+</nav>
+<span style="margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: #8c95a3"><span style="width: 8px; height: 8px; border-radius: 50%; background: #4fe3a1"></span>BNB testnet</span>
+<button style="min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid #f0b90b; background: transparent; color: #f0b90b; font: 600 15px Inter, sans-serif">Connect wallet</button>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: center; padding: 40px 0 56px">
+<div style="flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; align-items: flex-end; gap: 18px; font-family: 'Noto Sans Thai', sans-serif; font-weight: 700; line-height: 0.95">
+<span style="font-size: 132px; color: #f2f4f7">ไข่</span>
+<svg width="48" height="30" viewBox="0 0 36 24" aria-hidden="true" style="margin-bottom: 36px"><path d="M2 12 H30 M22 4 L31 12 L22 20" fill="none" stroke="#8c95a3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<span style="font-size: 132px; color: #f0b90b">ไก่</span>
+</div>
+<h1 style="margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-weight: 700; font-size: 48px; line-height: 1.08; letter-spacing: -0.025em; max-width: 14ch">Sponsor a real farm chicken, from egg to coop.</h1>
+<p style="margin: 0; color: #8c95a3; font-size: 18px; max-width: 44ch">Khai means egg. Kai means chicken. Buy an egg, hatch it, and one registered bird becomes yours to care for. Every feeding and health check is posted on-chain.</p>
+<div style="display: flex; gap: 12px; flex-wrap: wrap">
+<a href="Eggs.dc.html" style="min-height: 56px; line-height: 56px; padding: 0 32px; border-radius: 12px; background: #f0b90b; color: #0e1116; font-weight: 600; font-size: 17px">Get an egg</a>
+<a href="https://github.com/KoonPorZa/khai-and-kai" style="min-height: 56px; line-height: 56px; padding: 0 24px; border-radius: 12px; border: 1.5px solid #262c36; color: #f2f4f7; font-weight: 600; font-size: 17px">Read the contracts</a>
+</div>
+</div>
+
+<div style="flex: 1 1 460px; min-width: 0; padding: 24px; border-radius: 20px; background: #161b23; border: 1px solid #262c36; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
+<h2 style="margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 22px; font-weight: 700">The coop tonight</h2>
+<span style="font-size: 14px; color: #8c95a3">300 birds registered</span>
+</div>
+<div role="img" aria-label="Grid of 300 nest boxes. 118 are lit, meaning sponsored. 182 are dark, waiting for a sponsor." style="display: grid; grid-template-columns: repeat(25, minmax(0, 1fr)); gap: 4px">
+<sc-for list="{{nests}}" as="n" hint-placeholder-count="300"><span style="aspect-ratio: 1 / 1; border-radius: 3px; background: {{n.bg}}; box-shadow: {{n.glow}}"></span></sc-for>
+</div>
+<div style="display: flex; gap: 22px; flex-wrap: wrap; font-size: 14px; color: #8c95a3">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #f0b90b"></span>118 sponsored</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #7c5cff"></span>4 hatching now</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #262c36"></span>178 waiting</span>
+</div>
+<p style="margin: 0; font-size: 14px; color: #8c95a3">Each window is one bird. It lights up when someone hatches its egg. Hover a window to see the bird. 1,204 care records so far.</p>
+</div>
+</div>
+
+<h2 style="margin: 0 0 18px; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -0.01em">How it works</h2>
+<ol style="margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px">
+<li style="display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: 16px; background: #161b23">
+<span style="width: 36px; height: 36px; border-radius: 50%; background: #f0b90b; color: #0e1116; font: 700 16px 'Space Grotesk', sans-serif; display: flex; align-items: center; justify-content: center">1</span>
+<div style="font-weight: 600; font-size: 18px">Get an egg</div><div style="color: #8c95a3">0.01 tBNB. Up to 3 a day, and never more eggs than birds in the coop.</div>
+</li>
+<li style="display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: 16px; background: #161b23">
+<span style="width: 36px; height: 36px; border-radius: 50%; background: #f0b90b; color: #0e1116; font: 700 16px 'Space Grotesk', sans-serif; display: flex; align-items: center; justify-content: center">2</span>
+<div style="font-weight: 600; font-size: 18px">Hatch it</div><div style="color: #8c95a3">A block hash picks your bird. No bird is drawn twice, and you can check the draw yourself.</div>
+</li>
+<li style="display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: 16px; background: #161b23">
+<span style="width: 36px; height: 36px; border-radius: 50%; background: #f0b90b; color: #0e1116; font: 700 16px 'Space Grotesk', sans-serif; display: flex; align-items: center; justify-content: center">3</span>
+<div style="font-weight: 600; font-size: 18px">Keep it cared for</div><div style="color: #8c95a3">Pay the care fee each period. The farm posts what it did. A chicken with unpaid care can't change hands.</div>
+</li>
+</ol>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px 32px; justify-content: space-between; align-items: center; padding: 40px 0 32px; font-size: 13px; color: #8c95a3">
+<span style="max-width: 60ch">Testnet demo on BNB Smart Chain (chain 97). The 300 birds are sample data. Sponsorship is not legal ownership of an animal.</span>
+<span style="font-family: 'IBM Plex Mono', monospace">Kai 0x4c1e…a07B, Khai 0x9b22…5D10</span>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1040}}'>
+class Component extends DCLogic {
+renderVals() {
+var nests = [];
+var s = 7;
+for (var i = 0; i < 300; i++) {
+s = (s * 1103515245 + 12345) % 2147483648;
+var r = s / 2147483648;
+var kind = r < 0.393 ? 'lit' : (r < 0.407 ? 'hatch' : 'dark');
+nests.push({
+bg: kind === 'lit' ? '#f0b90b' : (kind === 'hatch' ? '#7c5cff' : '#262c36'),
+glow: kind === 'lit' ? '0 0 8px rgba(240,185,11,0.45)' : 'none'
+});
+}
+return { nests: nests };
+}
+}
+</script>
+</body>
+</html>

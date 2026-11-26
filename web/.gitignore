@@ -1,0 +1,6 @@
+node_modules
+dist
+hatch-film/out
+*.tsbuildinfo
+.env*
+hatch-film/assets

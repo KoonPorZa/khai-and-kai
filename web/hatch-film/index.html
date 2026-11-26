@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1280, height=720" />
+    <script src="./assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Noto Sans Thai"; font-weight: 700; src: url("./assets/noto-thai-700.woff2") format("woff2"); }
+      @font-face { font-family: "Space Grotesk"; font-weight: 700; src: url("./assets/space-grotesk-700.woff2") format("woff2"); }
+      :root { --ground: #0e1116; --surface: #161b23; --ink: #f2f4f7; --muted: #8c95a3; --accent: #f0b90b; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1280px; height: 720px; overflow: hidden; background: var(--ground); }
+      #root { position: relative; width: 1280px; height: 720px; background: var(--ground); color: var(--ink); font-family: "Space Grotesk", sans-serif; }
+      .layer { position: absolute; left: 340px; top: 18px; width: 600px; height: 600px; display: block; }
+      #egg-c1, #egg-c2, #shell-top, #shell-bottom, #chicken { opacity: 0; }
+      #glow { opacity: 0.35; }
+            #egg-egg, #egg-c1, #egg-c2 { transform-origin: 50% 82%; }
+      .thai { position: absolute; top: 250px; font: 700 190px/1 "Noto Sans Thai", sans-serif; }
+      #thai-egg { left: 40px; color: #232b36; }
+      #thai-chick { right: 40px; color: var(--accent); opacity: 0; }
+      .caption { position: absolute; left: 0; width: 1280px; bottom: 34px; text-align: center; font-size: 34px; letter-spacing: -0.01em; }
+      .caption span { color: var(--accent); }
+      #cap-wait, #cap-crack { color: var(--muted); }
+      #cap-crack { opacity: 0; }
+      #cap-done { opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="hatch" data-start="0" data-duration="8" data-width="1280" data-height="720" data-fps="30">
+      <div id="thai-egg" class="thai clip" data-start="0" data-duration="8" data-track-index="0" lang="th">ไข่</div>
+      <div id="thai-chick" class="thai clip" data-start="0" data-duration="8" data-track-index="0" lang="th">ไก่</div>
+      <img id="glow" class="layer clip" data-start="0" data-duration="8" data-track-index="1" src="./assets/glow.svg" alt="" />
+      <img id="egg-egg" class="layer clip" data-start="0" data-duration="8" data-track-index="2" src="./assets/egg.svg" alt="" />
+      <img id="egg-c1" class="layer clip" data-start="0" data-duration="8" data-track-index="2" src="./assets/egg-crack-1.svg" alt="" />
+      <img id="egg-c2" class="layer clip" data-start="0" data-duration="8" data-track-index="2" src="./assets/egg-crack-2.svg" alt="" />
+      <img id="shell-top" class="layer clip" data-start="0" data-duration="8" data-track-index="3" src="./assets/shell-top.svg" alt="" />
+      <img id="shell-bottom" class="layer clip" data-start="0" data-duration="8" data-track-index="3" src="./assets/shell-bottom.svg" alt="" />
+      <img id="chicken" class="layer clip" data-start="0" data-duration="8" data-track-index="4" src="./assets/chicken.svg" alt="" />
+      <div id="cap-wait" class="caption clip" data-start="0" data-duration="8" data-track-index="5">Something is moving in there</div>
+      <div id="cap-crack" class="caption clip" data-start="0" data-duration="8" data-track-index="5">The shell is cracking</div>
+      <div id="cap-done" class="caption clip" data-start="0" data-duration="8" data-track-index="5">You are now the sponsor of <span>KK-0042</span></div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      // start state
+      gsap.set("#glow", { transformOrigin: "50% 50%", scale: 0.92 });
+
+      // 0 - 2.2 s: the egg wobbles while the reveal block is mined
+      for (let i = 0; i < 5; i++) {
+        tl.to("#egg-egg", { rotation: 5, duration: 0.22, ease: "sine.inOut" }, i * 0.44);
+        tl.to("#egg-egg", { rotation: -5, duration: 0.22, ease: "sine.inOut" }, i * 0.44 + 0.22);
+      }
+      tl.to("#glow", { opacity: 0.7, scale: 1.06, duration: 1.1, ease: "sine.inOut", yoyo: true, repeat: 1 }, 0);
+
+      // 2.2 - 3.2 s: first cracks, a faster shake
+      tl.set("#egg-egg", { opacity: 0, rotation: 0 }, 2.2);
+      tl.set("#egg-c1", { opacity: 1 }, 2.2);
+      tl.set("#cap-wait", { opacity: 0 }, 2.2);
+      tl.set("#cap-crack", { opacity: 1 }, 2.2);
+      for (let i = 0; i < 3; i++) {
+        tl.to("#egg-c1", { rotation: 8, x: 3, duration: 0.17, ease: "sine.inOut" }, 2.2 + i * 0.34);
+        tl.to("#egg-c1", { rotation: -8, x: -3, duration: 0.17, ease: "sine.inOut" }, 2.2 + i * 0.34 + 0.17);
+      }
+
+      // 3.2 - 4.0 s: deeper cracks
+      tl.set("#egg-c1", { opacity: 0, rotation: 0, x: 0 }, 3.22);
+      tl.set("#egg-c2", { opacity: 1 }, 3.22);
+      for (let i = 0; i < 4; i++) {
+        tl.to("#egg-c2", { rotation: 9, x: 4, duration: 0.1, ease: "sine.inOut" }, 3.22 + i * 0.2);
+        tl.to("#egg-c2", { rotation: -9, x: -4, duration: 0.1, ease: "sine.inOut" }, 3.22 + i * 0.2 + 0.1);
+      }
+      tl.to("#glow", { opacity: 0.9, duration: 0.8, ease: "power1.in" }, 3.2);
+
+      // 4.0 - 4.9 s: the shell halves separate, a flash of glow
+      tl.set("#egg-c2", { opacity: 0, rotation: 0, x: 0 }, 4.02);
+      tl.set(["#shell-top", "#shell-bottom"], { opacity: 1 }, 4.02);
+      tl.to("#shell-top", { x: -200, y: -270, rotation: -22, opacity: 0, duration: 0.8, ease: "power2.out" }, 4.02);
+      tl.to("#shell-bottom", { x: 50, y: 180, rotation: 8, opacity: 0, duration: 0.8, ease: "power2.out" }, 4.02);
+      tl.to("#glow", { opacity: 1, scale: 1.3, duration: 0.45, ease: "power2.out" }, 4.02);
+      tl.to("#glow", { opacity: 0.85, scale: 1, duration: 0.7, ease: "power2.inOut" }, 4.45);
+
+      // 4.3 - 5.6 s: the chicken rises
+      tl.fromTo("#chicken", { opacity: 0, y: 260, scale: 0.7, transformOrigin: "50% 100%" }, { opacity: 1, y: 0, scale: 1, duration: 1.1, ease: "power3.out" }, 4.3);
+
+      // 5.4 s on: captions and the Thai headline turn from egg to chicken
+      tl.to("#cap-crack", { opacity: 0, duration: 0.3 }, 4.0);
+      tl.to("#cap-done", { opacity: 1, duration: 0.5, ease: "power2.out" }, 5.4);
+      tl.to("#thai-egg", { opacity: 0.35, duration: 0.6 }, 5.0);
+      tl.to("#thai-chick", { opacity: 1, duration: 0.6 }, 5.2);
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["hatch"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

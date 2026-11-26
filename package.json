@@ -1,0 +1,10 @@
+{
+  "name": "khai-kai",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "contracts:test": "pnpm --filter contracts test",
+    "contracts:build": "pnpm --filter contracts build"
+  }
+}

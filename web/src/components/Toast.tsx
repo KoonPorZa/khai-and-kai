@@ -1,0 +1,46 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { plain } from "../lib/errors";
+
+type ToastKind = "ok" | "error" | "info";
+type Toast = { id: number; kind: ToastKind; title: string; detail?: string };
+type Push = (kind: ToastKind, title: string, detail?: string) => void;
+
+const ToastContext = createContext<Push>(() => undefined);
+export const useToast = () => useContext(ToastContext);
+
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const nextId = useRef(1);
+  const push = useCallback<Push>((kind, title, detail) => {
+    const id = nextId.current++;
+    setToasts((t) => [...t.slice(-2), { id, kind, title: plain(title) ?? "Something went wrong.", detail: plain(detail) }]);
+    window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), kind === "error" ? 9000 : 5000);
+  }, []);
+  const value = useMemo(() => push, [push]);
+  // The popover lives in the browser's top layer, so toasts show above an open modal dialog.
+  const layer = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = layer.current;
+    if (!el || typeof el.showPopover !== "function") return;
+    if (el.matches(":popover-open")) el.hidePopover();
+    if (toasts.length > 0) el.showPopover();
+  }, [toasts]);
+  return (
+    <ToastContext.Provider value={value}>
+      {children}
+      <div className="toasts" role="status" aria-live="polite" popover="manual" ref={layer}>
+        {toasts.map((t) => (
+          <div key={t.id} className={`toast toast-${t.kind}`}>
+            <div className="toast-body">
+              <strong>{t.title}</strong>
+              {t.detail ? <span>{t.detail}</span> : null}
+            </div>
+            <button type="button" className="toast-close" aria-label="Dismiss" onClick={() => setToasts((all) => all.filter((x) => x.id !== t.id))}>
+              &times;
+            </button>
+          </div>
+        ))}
+      </div>
+    </ToastContext.Provider>
+  );
+}
