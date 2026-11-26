@@ -61,7 +61,7 @@ function deployedBasics() {
     MAX_CARE_PERIODS: () => 8760n,
     FARM_ROLE: () => `0x${"11".repeat(32)}`,
     hasRole: () => false,
-    stats: () => ({ birdsRegistered: 30n, poolSize: 26n, hatched: 3n, pendingHatches: 1n, careProofs: 5n, collected: 0n, released: 0n }),
+    stats: () => ({ birdsRegistered: 30n, poolSize: 26n, hatched: 3n, pendingHatches: 1n, careProofs: 5n, collected: 0n, released: 0n, hatchCount: 3n }),
     tokenByIndex: ([i]: readonly unknown[]) => [4n, 9n, 12n][Number(i)],
   });
 }
@@ -450,6 +450,7 @@ describe("collect and release", () => {
     expect(screen.getByText(/Collection requested on/)).toBeTruthy();
     expect(screen.getByText(/Waiting for the farm to hand over the bird/)).toBeTruthy();
     expect(screen.getByText(/cannot be transferred meanwhile/)).toBeTruthy();
+    expect(screen.getByText(/can confirm the handover or decline the request/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Collect this bird" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Cancel request" }));
     await waitFor(() => expect(actions.writeContract).toHaveBeenCalled());
@@ -476,6 +477,12 @@ describe("collect and release", () => {
     state.reads.releasableAt = () => state.blockTimestamp - 10n;
     show("/chicken/4");
     expect(screen.getByText("This bird can now be returned to the coop. Pay care to keep it.")).toBeTruthy();
+  });
+
+  it("an overdue bird with a pending request cannot be returned meanwhile, and says so", () => {
+    chickenState(-900, { redeemRequestedAt: state.blockTimestamp - 3000n });
+    show("/chicken/4");
+    expect(screen.getByText(/cannot return this bird to the coop while a collection request is pending/)).toBeTruthy();
   });
 
   it("marks a released bird that is waiting again, with its earlier care history", () => {
@@ -510,7 +517,7 @@ describe("collect and release", () => {
 
   it("home: a collected state in the legend and the grid, the fourth how-it-works card, and the count", () => {
     deployedBasics();
-    state.reads.stats = () => ({ birdsRegistered: 30n, poolSize: 26n, hatched: 3n, pendingHatches: 0n, careProofs: 5n, collected: 1n, released: 0n });
+    state.reads.stats = () => ({ birdsRegistered: 30n, poolSize: 26n, hatched: 3n, pendingHatches: 0n, careProofs: 5n, collected: 1n, released: 0n, hatchCount: 3n });
     state.reads.chicken = ([id]) => chickenOf(id as bigint, ME, 100, id === 9n ? { redeemedAt: 5n } : {});
     const { container } = show("/");
     expect(container.querySelectorAll(".cell-collected")).toHaveLength(1);
@@ -519,6 +526,7 @@ describe("collect and release", () => {
     expect(screen.getByLabelText("Open chicken KK-0009, collected")).toBeTruthy();
     expect(screen.getByText("Collect, pass on, or let go")).toBeTruthy();
     expect(screen.getByText(/1 bird collected/)).toBeTruthy();
+    expect(screen.getByText(/3 hatched so far/)).toBeTruthy();
   });
 
   it("farm: lists collection requests and confirms a handover only after an explicit second step", async () => {

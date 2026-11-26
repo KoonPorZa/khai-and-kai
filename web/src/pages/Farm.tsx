@@ -118,8 +118,10 @@ export function Farm() {
         </p>
       ) : null}
 
-      <CollectionRequests />
-      <OverdueBirds />
+      <div className="stack farm-queues">
+        <CollectionRequests />
+        <OverdueBirds />
+      </div>
     </div>
   );
 }

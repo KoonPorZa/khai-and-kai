@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAccount, useBlock, useReadContract } from "wagmi";
 import { kaiAbi } from "../abi/kai";
@@ -25,7 +25,14 @@ export function ChickenPage() {
   const tx = useTx();
   const { careFee, carePeriod, maxPeriods } = useCareParams();
   const chicken = useChicken(id);
-  const waiting = useBird(chicken.isError ? id : undefined);
+  // An errored query that is refetching reports "pending" again; remember the miss so the page does not flash "Reading..." every poll.
+  const [noToken, setNoToken] = useState(false);
+  useEffect(() => {
+    if (chicken.isError) setNoToken(true);
+    else if (chicken.data) setNoToken(false);
+  }, [chicken.isError, chicken.data]);
+  const missing = chicken.isError || (noToken && !chicken.data);
+  const waiting = useBird(missing ? id : undefined);
   const c = chicken.data;
   const hatchQ = useHatch(c && c.hatchId > 0n ? c.hatchId : undefined);
   const hatch = hatchQ.data?.[0]?.result;
@@ -76,7 +83,7 @@ export function ChickenPage() {
       </div>
     );
   }
-  if (chicken.isError) {
+  if (missing) {
     if (waiting.isLoading) {
       return (
         <div className="stack narrow">
@@ -233,8 +240,10 @@ export function ChickenPage() {
 
 
             {overdue && releaseAt > 0 ? (
-              <p className={`notice small ${canRelease ? "notice-bad" : ""}`} role="status">
-                {canRelease
+              <p className={`notice small ${canRelease && !requested ? "notice-bad" : ""}`} role="status">
+                {requested
+                  ? "The farm cannot return this bird to the coop while a collection request is pending. It has to confirm or decline the request first."
+                  : canRelease
                   ? "This bird can now be returned to the coop. Pay care to keep it."
                   : `The farm may return this bird to the coop after ${formatWhen(releaseAt, now)}. Paying care before then keeps it yours.`}
               </p>
@@ -243,7 +252,7 @@ export function ChickenPage() {
             {requested ? (
               <section className="card stack tight-gap collect-pending" aria-labelledby="collect-title">
                 <h2 id="collect-title" className="strong">Collection requested on {formatDate(Number(c.redeemRequestedAt))}</h2>
-                <p className="muted small">Waiting for the farm to hand over the bird. The token cannot be transferred meanwhile, and care still runs.</p>
+                <p className="muted small">Waiting for the farm to hand over the bird. The farm can confirm the handover or decline the request. The token cannot be transferred meanwhile, and care still runs.</p>
                 {mine ? (
                   <ActionButton variant="outline" className="btn-block" onClick={cancel} busy={cancelTx.busy}>
                     {cancelTx.state.status === "wallet" ? "Confirm in your wallet…" : cancelTx.state.status === "pending" ? "Cancelling…" : "Cancel request"}

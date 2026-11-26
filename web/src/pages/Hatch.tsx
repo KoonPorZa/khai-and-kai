@@ -38,6 +38,11 @@ export function HatchPage() {
   const tokenId = revealedToken ?? finishedToken;
   const chicken = useChicken(tokenId);
   const bird = chicken.data;
+  const [missedToken, setMissedToken] = useState(false); // an errored query shows "pending" again while it refetches
+  useEffect(() => {
+    if (chicken.isError) setMissedToken(true);
+    else if (chicken.data) setMissedToken(false);
+  }, [chicken.isError, chicken.data]);
   const [startedFinished, setStartedFinished] = useState<boolean | undefined>();
   useEffect(() => {
     if (startedFinished === undefined && exists) setStartedFinished(hatch.birdId !== 0);
@@ -112,7 +117,7 @@ export function HatchPage() {
 
   // A finished hatch is only "yours" while its bird is still with the hatch owner: after a release the token is gone,
   // and after a transfer another sponsor holds it.
-  const returned = finishedToken !== undefined && revealedToken === undefined && chicken.isError;
+  const returned = finishedToken !== undefined && revealedToken === undefined && (chicken.isError || (missedToken && !chicken.data));
   const movedOn = finishedToken !== undefined && revealedToken === undefined && !!bird && !!hatch && bird.owner.toLowerCase() !== hatch.owner.toLowerCase();
   if (returned || movedOn) {
     return (

@@ -51,7 +51,7 @@ function CoopTonight() {
       )}
       <p className="muted small">
         Each window is one bird. It lights up when someone hatches its egg. Tap a lit window to open that chicken. Read straight from the contract
-        {s ? `, ${formatNumber(s.careProofs)} care records so far` : ""}{collectedCount > 0 ? `, ${formatNumber(collectedCount)} ${collectedCount === 1 ? "bird" : "birds"} collected` : ""}.
+        {s ? `, ${formatNumber(s.careProofs)} care records so far` : ""}{s ? `, ${formatNumber(s.hatchCount)} hatched so far` : ""}{collectedCount > 0 ? `, ${formatNumber(collectedCount)} ${collectedCount === 1 ? "bird" : "birds"} collected` : ""}.
       </p>
     </section>
   );
