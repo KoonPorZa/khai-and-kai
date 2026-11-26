@@ -81,10 +81,15 @@ export function useCareParams() {
     contracts: [
       { address: kai, abi: kaiAbi, functionName: "careFee", chainId },
       { address: kai, abi: kaiAbi, functionName: "carePeriod", chainId },
+      { address: kai, abi: kaiAbi, functionName: "MAX_CARE_PERIODS", chainId },
     ],
     query: { enabled: !!kai, staleTime: 60_000 },
   });
-  return { careFee: q.data?.[0]?.result as bigint | undefined, carePeriod: q.data?.[1]?.result as bigint | undefined };
+  return {
+    careFee: q.data?.[0]?.result as bigint | undefined,
+    carePeriod: q.data?.[1]?.result as bigint | undefined,
+    maxPeriods: q.data?.[2]?.result as bigint | undefined,
+  };
 }
 
 export function useChicken(tokenId: bigint | undefined) {

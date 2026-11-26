@@ -66,6 +66,8 @@ button:disabled { cursor: not-allowed; }
   font: 700 20px var(--font-display); letter-spacing: -0.01em; min-height: 44px; align-items: center;
 }
 .brand:hover { color: var(--text); }
+.brand-name { white-space: nowrap; }
+.bird-glyph { border-radius: 12px; display: block; }
 .brand-thai { font: 500 13px var(--font-thai); color: var(--accent); }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .nav-top { display: none; gap: 4px; margin-left: 8px; }
@@ -267,7 +269,7 @@ button.cell-lit:focus-visible { outline-offset: 1px; }
 .cols { display: flex; flex-direction: column; gap: 20px; }
 .portrait { position: relative; overflow: hidden; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); min-height: 280px; display: flex; align-items: flex-end; justify-content: center; padding-top: 16px; }
 .portrait-thai { position: absolute; left: 14px; top: 0; font: 700 120px/1 var(--font-thai); color: #1e2530; }
-.portrait > svg, .portrait-img { position: relative; max-height: 380px; width: auto; max-width: 92%; }
+.portrait > svg, .portrait-img, .portrait > .bird-glyph { position: relative; max-height: 380px; width: auto; max-width: 92%; }
 .portrait-onchain { width: 100%; max-width: 380px; border-radius: 12px; }
 .chip { position: absolute; right: 14px; top: 14px; padding: 4px 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 .band { flex: none; margin-top: 8px; padding: 4px 12px; border-radius: 8px; background: var(--accent); color: var(--bg); font-weight: 500; font-size: 14px; }
@@ -290,10 +292,11 @@ select:hover, textarea:hover, .field input:hover { border-color: var(--muted); }
 select:focus-visible, textarea:focus-visible, .field input:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(240, 185, 11, 0.25); }
 textarea { resize: vertical; }
 .timeline { display: flex; flex-direction: column; gap: 14px; }
-.timeline li { position: relative; display: flex; flex-direction: column; gap: 2px; padding-left: 22px; animation: page-in var(--t-med) var(--ease) both; }
-.timeline li::before { content: ""; position: absolute; left: 4px; top: 22px; bottom: -14px; width: 2px; background: var(--line); }
+.timeline li { position: relative; display: flex; flex-direction: column; gap: 2px; padding-left: 38px; animation: page-in var(--t-med) var(--ease) both; }
+.timeline li::before { content: ""; position: absolute; left: 12px; top: 30px; bottom: -14px; width: 2px; background: var(--line); }
 .timeline li:last-child::before { display: none; }
-.tl-dot { position: absolute; left: 0; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.tl-dot { position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); color: var(--accent); display: grid; place-items: center; }
+.kind-icon { display: inline-flex; line-height: 0; }
 .tl-note { color: var(--text); }
 .kv { display: grid; gap: 8px 24px; font-size: 14px; }
 .kv div { display: flex; justify-content: space-between; gap: 12px; }
@@ -352,11 +355,18 @@ textarea { resize: vertical; }
 @keyframes shell-bottom { from { transform: none; opacity: 1; } to { transform: translate(8%, 30%) rotate(8deg); opacity: 0; } }
 @keyframes bird-rise { from { opacity: 0; transform: translateY(46%) scale(0.7); } to { opacity: 1; transform: none; } }
 
+.home-top { position: relative; isolation: isolate; }
+.hero-art { display: none; }
+
 /* wide screens */
 @media (min-width: 700px) {
   .net-badge { display: inline-flex; }
 }
 @media (min-width: 900px) {
+  .hero-art {
+    display: block; position: absolute; z-index: -1; inset: 0 -32px; width: calc(100% + 64px); height: 100%; object-fit: cover; opacity: 0.32;
+    border-radius: 24px; -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent); mask-image: linear-gradient(to bottom, #000 45%, transparent);
+  }
   body { font-size: 16px; }
   .topbar { padding: 20px 32px; }
   .brand { font-size: 22px; }

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAccount, useBlockNumber } from "wagmi";
 import { parseEventLogs } from "viem";
 import { kaiAbi } from "../abi/kai";
@@ -21,10 +21,11 @@ function parseId(raw: string | undefined): bigint | undefined {
 export function HatchPage() {
   const id = parseId(useParams().id);
   const navigate = useNavigate();
+  const fresh = (useLocation().state as { fresh?: boolean } | null)?.fresh === true;
   const { address } = useAccount();
   const now = useChainNow();
   const tx = useTx();
-  const block = useBlockNumber({ chainId: targetChain.id, watch: true, query: { refetchInterval: 1500 } });
+  const block = useBlockNumber({ chainId: targetChain.id, cacheTime: 0, query: { refetchInterval: 1000 } });
   const hatchQ = useHatch(id);
   const hatch = hatchQ.data?.[0]?.result;
   const proof = hatchQ.data?.[1]?.result;
@@ -51,13 +52,23 @@ export function HatchPage() {
 
   const finish = async () => {
     if (!deployment || id === undefined) return;
-    const receipt = await tx.run({ address: deployment.kai, abi: kaiAbi, functionName: "finishHatch", args: [id] });
+    const receipt = await tx.run({ address: deployment.kai, abi: kaiAbi, functionName: "finishHatch", args: [id], padGas: true });
     if (!receipt) return;
     // finishHatch also finishes earlier pending hatches, so pick the event for this hatch.
     const done = parseEventLogs({ abi: kaiAbi, eventName: "HatchFinished", logs: receipt.logs }).find((l) => l.args.hatchId === id);
     if (done) setRevealedToken(done.args.tokenId);
     hatchQ.refetch();
   };
+
+  // The second confirmation opens by itself once the reveal block has passed, for the hatch the user just started.
+  const autoTried = useRef(false);
+  const canAuto = fresh && ready && isOwner && finishedToken === undefined && !!deployment;
+  useEffect(() => {
+    if (!canAuto || autoTried.current) return;
+    autoTried.current = true;
+    void finish();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canAuto]);
 
   const startBlock = reveal !== undefined ? reveal - 2n : undefined;
   const heading = useMemo(() => {
@@ -114,7 +125,7 @@ export function HatchPage() {
           onSettled={() => setSettled(true)}
           label={done ? "Your chicken has hatched" : "An egg about to hatch"}
         >
-          {bird ? <BirdGlyph breed={bird.bird.breed} sex={bird.bird.sex} plumage={bird.bird.plumage} width={200} label={speciesLabel(bird.bird.breed, bird.bird.sex)} /> : null}
+          {bird ? <BirdGlyph breed={bird.bird.breed} sex={bird.bird.sex} plumage={bird.bird.plumage} tokenId={bird.tokenId} width={200} label={speciesLabel(bird.bird.breed, bird.bird.sex)} /> : null}
         </HatchAnimation>
 
         {done ? (

@@ -20,7 +20,7 @@ export function Coop() {
   const now = useChainNow();
   const startTx = useTx();
   const balance = useBalance({ address, chainId, query: { enabled: !!address, refetchInterval: 10_000 } });
-  const block = useBlockNumber({ chainId, query: { refetchInterval: 3000 } });
+  const block = useBlockNumber({ chainId, cacheTime: 0, query: { refetchInterval: 3000 } });
 
   const eggs = useReadContract({
     address: deployment?.khai,
@@ -67,7 +67,7 @@ export function Coop() {
     const id = hatchIdFromReceipt(receipt);
     eggs.refetch();
     hatchIds.refetch();
-    if (id !== undefined) navigate(`/hatch/${id}`);
+    if (id !== undefined) navigate(`/hatch/${id}`, { state: { fresh: true } });
   };
 
   if (!isConnected) {
@@ -131,7 +131,7 @@ export function Coop() {
               const overdue = left < 0;
               return (
                 <Link key={String(c.tokenId)} to={`/chicken/${c.tokenId}`} className={`card chicken-card ${overdue ? "is-overdue" : ""}`}>
-                  <span className="chicken-art"><BirdGlyph breed={c.bird.breed} sex={c.bird.sex} plumage={c.bird.plumage} width={70} /></span>
+                  <span className="chicken-art"><BirdGlyph breed={c.bird.breed} sex={c.bird.sex} plumage={c.bird.plumage} tokenId={c.tokenId} width={70} /></span>
                   <span className="chicken-meta">
                     <span className="strong">{speciesLabel(c.bird.breed, c.bird.sex)}</span>
                     <span className="mono muted small">{bandId(c.tokenId)}</span>

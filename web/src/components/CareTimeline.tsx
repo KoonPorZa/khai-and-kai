@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useReadContract } from "wagmi";
 import { kaiAbi } from "../abi/kai";
 import { deployment, targetChain } from "../config/chains";
+import { KindIcon } from "./Art";
 import { formatWhen, kindName, shortHex } from "../lib/format";
 
 const PAGE = 5;
@@ -30,7 +31,7 @@ export function CareTimeline({ tokenId, total, now }: { tokenId: bigint; total: 
         <ol className="timeline">
           {rows.map((r, i) => (
             <li key={`${r.at}-${r.contentHash}-${i}`}>
-              <span className="tl-dot" aria-hidden="true" />
+              <span className="tl-dot" aria-hidden="true"><KindIcon kind={r.kind} size={16} /></span>
               <span className="strong">{kindName(r.kind)}</span>
               <span className="tl-note">{r.note || "No note."}</span>
               <span className="muted small tl-when">

@@ -48,7 +48,7 @@ export function Eggs() {
     if (id === undefined) {
       toast("ok", "Hatch started.", "Open My coop to reveal your bird.");
       navigate("/coop");
-    } else navigate(`/hatch/${id}`);
+    } else navigate(`/hatch/${id}`, { state: { fresh: true } });
   };
 
   const buyToKeep = async () => {

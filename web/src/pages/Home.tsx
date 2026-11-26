@@ -4,6 +4,7 @@ import { deployment, GITHUB } from "../config/chains";
 import { useSponsoredIds, useStats, useCareParams, useEggInfo } from "../hooks/useChain";
 import { formatNative, formatNumber } from "../lib/format";
 import { nativeSymbol } from "../config/chains";
+import { artManifest } from "../lib/art";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 
 function Hero() {
@@ -84,6 +85,7 @@ export function Home() {
   return (
     <div className="home">
       <div className="home-top">
+        {artManifest.hero ? <img className="hero-art" src={artManifest.hero} alt="" aria-hidden="true" loading="lazy" decoding="async" /> : null}
         <Hero />
         <CoopTonight />
       </div>

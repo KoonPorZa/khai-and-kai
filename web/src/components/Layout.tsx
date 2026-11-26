@@ -3,12 +3,14 @@ import { useEffect } from "react";
 import { deployment, EXPLORER, GITHUB, networkLabel } from "../config/chains";
 import { useFarmRole } from "../hooks/useChain";
 import { shortHex } from "../lib/format";
+import { LogoMark } from "./Art";
 import { NetworkBadge, WalletButton } from "./Wallet";
 
 function Brand() {
   return (
     <Link to="/" className="brand">
-      Khai &amp; Kai <span className="brand-thai" lang="th">ไข่ ไก่</span>
+      <LogoMark size={30} />
+      <span className="brand-name">Khai &amp; Kai</span> <span className="brand-thai" lang="th">ไข่ ไก่</span>
     </Link>
   );
 }

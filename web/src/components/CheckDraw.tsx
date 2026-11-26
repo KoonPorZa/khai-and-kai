@@ -62,7 +62,7 @@ export function CheckDraw({ hatchId, revealBlock, usedFallback, seed, poolSizeAt
       </div>
       <div className="check-result" role="status">
         {result.status === "ok" ? (
-          <p className="row nowrap ok-text"><Check size={18} /><span>Checked in your browser. {usedFallback ? "The hatch number and block number" : "The block hash and hatch number"} give position {formatNumber(result.position)}, which is this bird.</span></p>
+          <p className="row nowrap ok-text"><Check size={18} /><span>Checked in your browser. {usedFallback ? "The hatch number and block number" : "The block hash and hatch number"} give position {formatNumber(result.position)} of {formatNumber(poolSizeAtFinish)}, the same as the contract recorded. That proves the position was not chosen by anyone. Which bird sat at that position is contract state at that block.</span></p>
         ) : null}
         {result.status === "bad" ? <p className="row nowrap bad-text"><Warn size={18} /><span>The recomputed draw does not match the contract. Do not trust this record.</span></p> : null}
         {result.status === "error" ? <p className="row nowrap bad-text"><Warn size={18} /><span>{result.message}</span></p> : null}

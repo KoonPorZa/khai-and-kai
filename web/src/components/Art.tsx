@@ -1,67 +1,43 @@
-import { useState } from "react";
-import { PLUMAGE_COLOURS, TAIL_COLOURS } from "../lib/chickenArt";
+import { artManifest } from "../lib/art";
+import { chickenDataUri } from "../lib/composeArt";
+import eggUrl from "../assets/egg/egg.svg";
+import crackedUrl from "../assets/egg/egg-crack-1.svg";
+import logoMark from "../assets/brand/logo-mark.svg";
+import feeding from "../assets/brand/feeding.svg?raw";
+import health from "../assets/brand/health.svg?raw";
+import weight from "../assets/brand/weight.svg?raw";
+import vaccination from "../assets/brand/vaccination.svg?raw";
+import photo from "../assets/brand/photo.svg?raw";
+import note from "../assets/brand/note.svg?raw";
 import { breedName, plumageName, sexName } from "../lib/format";
 
 export function EggSvg({ width = 132, cracked = false, label = "An egg" }: { width?: number; cracked?: boolean; label?: string }) {
-  return (
-    <svg width={width} height={(width * 64) / 50} viewBox="0 0 50 64" role="img" aria-label={label}>
-      <path d="M25 3 C38 3 47 24 47 38 C47 52 37 61 25 61 C13 61 3 52 3 38 C3 24 12 3 25 3 Z" fill="#f2f4f7" />
-      <path d="M12 22 C14 14 19 8 24 7" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" />
-      {cracked ? (
-        <path d="M5 33 L12 28 L17 35 L24 27 L30 35 L37 28 L45 34" fill="none" stroke="#0e1116" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-      ) : (
-        <ellipse cx="25" cy="48" rx="16" ry="9" fill="#c5ccd6" opacity="0.45" />
-      )}
-    </svg>
-  );
+  return <img src={cracked ? crackedUrl : eggUrl} width={width} alt={label} aria-hidden={label ? undefined : true} />;
 }
 
-/** Small chicken drawn from the bird's traits. Decorative unless a label is given. */
-export function BirdGlyph({ breed, sex, plumage, width = 70, label }: { breed: number; sex: number; plumage: number; width?: number; label?: string }) {
-  const [body, shade] = PLUMAGE_COLOURS[plumage] ?? PLUMAGE_COLOURS[0]!;
-  const tail = TAIL_COLOURS[breed % TAIL_COLOURS.length]!;
-  const rooster = sex === 1;
-  const dark = plumage === 1;
-  const crest = breed === 0 || breed === 3 || breed === 8;
-  return (
-    <svg
-      width={width}
-      height={(width * 130) / 140}
-      viewBox="0 0 140 130"
-      role={label ? "img" : undefined}
-      aria-label={label}
-      aria-hidden={label ? undefined : true}
-    >
-      <path d={rooster ? "M38 62 C6 52 0 18 20 6 C22 32 34 44 52 50 Z" : "M38 62 C10 50 6 22 22 12 C24 34 34 44 52 50 Z"} fill={tail} />
-      <ellipse cx="68" cy="78" rx={rooster ? 40 : 38} ry={rooster ? 34 : 32} fill={body} />
-      <circle cx="98" cy="44" r="19" fill={body} />
-      {crest ? (
-        <>
-          <circle cx="92" cy="26" r="9" fill={body} />
-          <circle cx="102" cy="23" r="9" fill={body} />
-          <circle cx="110" cy="29" r="7" fill={body} />
-        </>
-      ) : (
-        <path d={rooster ? "M86 28 C86 14 96 14 97 24 C99 10 111 12 108 25 C114 18 121 24 113 33 Z" : "M88 28 C88 20 95 19 96 26 C98 18 106 18 106 27 Z"} fill="#ff5d73" />
-      )}
-      <path d="M40 80 C52 62 80 66 82 84 C70 98 50 96 40 80 Z" fill={shade} />
-      <path d="M104 60 C108 70 100 72 99 62 Z" fill="#ff5d73" />
-      <path d="M115 44 L130 49 L115 54 Z" fill="#f0b90b" />
-      <circle cx="103" cy="42" r="3" fill={dark ? "#f2f4f7" : "#0e1116"} />
-      <path d="M60 108 V124 M78 108 V124" stroke="#f0b90b" strokeWidth="4" strokeLinecap="round" fill="none" />
-    </svg>
-  );
+export function LogoMark({ size = 28 }: { size?: number }) {
+  return <img src={logoMark} width={size} height={size} alt="" aria-hidden="true" />;
 }
 
-/** `/art/breeds/<id>.webp` when the file exists, otherwise the on-chain token art enlarged, otherwise a drawn glyph. */
-export function BreedPortrait({ breed, sex, plumage, tokenImage }: { breed: number; sex: number; plumage: number; tokenImage?: string }) {
-  const [failed, setFailed] = useState(false);
+const KIND_ICONS = [feeding, health, weight, vaccination, photo, note];
+
+/** The illustrator's care icons (currentColor line art), indexed by proof kind. */
+export function KindIcon({ kind, size = 22 }: { kind: number; size?: number }) {
+  const svg = (KIND_ICONS[kind] ?? note).replace(/width="24" height="24"/, `width="${size}" height="${size}"`);
+  return <span className="kind-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} />;
+}
+
+/** The chicken drawn from its traits by the shared kit, identical to the on-chain token art. */
+export function BirdGlyph({ breed, sex, plumage, tokenId, width = 70, label }: { breed: number; sex: number; plumage: number; tokenId?: number | bigint; width?: number; label?: string }) {
+  return <img className="bird-glyph" src={chickenDataUri({ breed, sex, plumage, tokenId })} width={width} height={width} alt={label ?? ""} aria-hidden={label ? undefined : true} />;
+}
+
+/** The breed illustration when the illustrator has delivered it, otherwise the kit drawing enlarged. */
+export function BreedPortrait({ breed, sex, plumage, tokenId }: { breed: number; sex: number; plumage: number; tokenId?: number | bigint }) {
   const label = `Breed portrait: a ${plumageName(plumage).toLowerCase()} ${breedName(breed)} ${sexName(sex)}`;
-  if (!failed) {
-    return <img className="portrait-img" src={`/art/breeds/${breed}.webp`} alt={label} onError={() => setFailed(true)} />;
-  }
-  if (tokenImage) return <img className="portrait-img portrait-onchain" src={tokenImage} alt={label} />;
-  return <BirdGlyph breed={breed} sex={sex} plumage={plumage} width={280} label={label} />;
+  const src = artManifest.breeds[String(breed)];
+  if (src) return <img className="portrait-img" src={src} alt={label} />;
+  return <BirdGlyph breed={breed} sex={sex} plumage={plumage} tokenId={tokenId} width={280} label={label} />;
 }
 
 export function Check({ size = 20 }: { size?: number }) {

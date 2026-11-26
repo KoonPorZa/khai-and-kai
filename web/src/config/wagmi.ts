@@ -15,6 +15,7 @@ export const wagmiConfig = createConfig({
   connectors: [injected(), ...(__LOCAL__ ? [localWalletConnector()] : [])],
   multiInjectedProviderDiscovery: true,
   batch: { multicall: true },
+  pollingInterval: 1000,
   ssr: false,
 });
 

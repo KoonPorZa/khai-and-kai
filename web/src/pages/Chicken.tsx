@@ -11,6 +11,7 @@ import { deployment, EXPLORER, nativeSymbol, networkLabel, targetChain } from ".
 import { useCareParams, useChicken, useHatch } from "../hooks/useChain";
 import { useChainNow } from "../hooks/useChainNow";
 import { useTx } from "../hooks/useTx";
+import { artManifest } from "../lib/art";
 import { decodeTokenUri, isImageDataUri } from "../lib/chickenArt";
 import { ageLabel, bandId, clockTime, formatDate, formatDuration, formatNative, periodLabel, plumageName, shortHex, speciesLabel } from "../lib/format";
 
@@ -23,7 +24,7 @@ export function ChickenPage() {
   const now = useChainNow();
   const toast = useToast();
   const tx = useTx();
-  const { careFee, carePeriod } = useCareParams();
+  const { careFee, carePeriod, maxPeriods } = useCareParams();
   const chicken = useChicken(id);
   const c = chicken.data;
   const hatchQ = useHatch(c && c.hatchId > 0n ? c.hatchId : undefined);
@@ -90,7 +91,9 @@ export function ChickenPage() {
   const progress = overdue ? 100 : Math.round((1 - Math.min(left, period) / period) * 100);
   const mine = !!address && address.toLowerCase() === c.owner.toLowerCase();
   const name = speciesLabel(c.bird.breed, c.bird.sex);
-  const n = periods;
+  const cap = Number(maxPeriods ?? 8760n);
+  const choices = PERIOD_CHOICES.filter((p) => p <= cap);
+  const n = Math.min(periods, cap);
   const total = careFee !== undefined ? careFee * BigInt(n) : undefined;
 
   const pay = async () => {
@@ -114,8 +117,8 @@ export function ChickenPage() {
         <div className="stack">
           <div className="portrait">
             <span className="portrait-thai" lang="th" aria-hidden="true">ไก่</span>
-            <BreedPortrait breed={c.bird.breed} sex={c.bird.sex} plumage={c.bird.plumage} tokenImage={tokenArt} />
-            <span className="chip">Breed illustration</span>
+            <BreedPortrait breed={c.bird.breed} sex={c.bird.sex} plumage={c.bird.plumage} tokenId={c.tokenId} />
+            <span className="chip">{artManifest.breeds[String(c.bird.breed)] ? "Breed illustration" : "Drawn from its traits"}</span>
           </div>
 
           <div className="stack tight-gap">
@@ -162,7 +165,7 @@ export function ChickenPage() {
             <div className="row nowrap">
               <label htmlFor="periods" className="muted small">{overdue ? "Pay for" : "Add"}</label>
               <select id="periods" value={n} onChange={(e) => setPeriods(Number(e.target.value))}>
-                {PERIOD_CHOICES.map((p) => (
+                {choices.map((p) => (
                   <option key={p} value={p}>
                     {periodLabel(p, period)}{careFee !== undefined ? `, ${formatNative(careFee * BigInt(p))} ${nativeSymbol}` : ""}
                   </option>
@@ -181,7 +184,7 @@ export function ChickenPage() {
 
           <section className="card row nowrap onchain">
             <div className="onchain-art">
-              {tokenArt ? <img src={tokenArt} alt="On-chain token art" /> : <BirdGlyph breed={c.bird.breed} sex={c.bird.sex} plumage={c.bird.plumage} width={84} label="On-chain token art" />}
+              {tokenArt ? <img src={tokenArt} alt="On-chain token art" /> : <BirdGlyph breed={c.bird.breed} sex={c.bird.sex} plumage={c.bird.plumage} tokenId={c.tokenId} width={84} label="On-chain token art" />}
             </div>
             <div className="stack tight-gap">
               <div className="strong">On-chain token art</div>
