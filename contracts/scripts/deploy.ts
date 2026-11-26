@@ -47,13 +47,27 @@ async function main() {
     // A recorded address only counts if it holds code on this chain (a fresh local node has none).
     // Kai takes the other two addresses in its constructor, so it is redeployed whenever either of them is.
     const hasCode = async (a: Address | undefined) => !!a && !!(await publicClient.getCode({ address: a }))?.length;
-    const missing = {
-      KaiRenderer: !(await hasCode(d.contracts.KaiRenderer)),
-      Khai: !(await hasCode(d.contracts.Khai)),
-      Kai: !(await hasCode(d.contracts.Kai)),
+    const findDropped = async () => {
+      const missing = {
+        KaiRenderer: !(await hasCode(d.contracts.KaiRenderer)),
+        Khai: !(await hasCode(d.contracts.Khai)),
+        Kai: !(await hasCode(d.contracts.Kai)),
+      };
+      missing.Kai = missing.Kai || missing.KaiRenderer || missing.Khai;
+      return (Object.keys(missing) as (keyof typeof missing)[]).filter((k) => missing[k] && d.contracts[k]);
     };
-    missing.Kai = missing.Kai || missing.KaiRenderer || missing.Khai;
-    const dropped = (Object.keys(missing) as (keyof typeof missing)[]).filter((k) => missing[k] && d.contracts[k]);
+    let dropped = await findDropped();
+    if (dropped.length && d.status === "complete" && chainId !== LOCAL_CHAIN_ID) {
+      // One RPC answering "no code" must never trigger a redeploy on a real network: ask again, then require REDEPLOY=1.
+      await new Promise((r) => setTimeout(r, 3000));
+      dropped = await findDropped();
+      if (dropped.length) {
+        throw new Error(
+          `${rel} is complete but ${dropped.join(", ")} has no code on chain ${chainId} (checked twice). ` +
+            "Check the RPC first; to deploy a fresh set on purpose, run again with REDEPLOY=1.",
+        );
+      }
+    }
     if (d.status === "complete" && !dropped.length) {
       console.log(`${rel} is complete; nothing to do. Set REDEPLOY=1 to deploy a fresh set.`);
       return;
