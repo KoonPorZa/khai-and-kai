@@ -66,7 +66,7 @@ The web app sends the finishing transaction itself about 1.5 seconds after the f
 
 ## Live demo and deployed contracts
 
-Live demo: pending deployment
+Live demo: https://khai-and-kai.koonporza-learn.workers.dev
 
 Network: BNB Smart Chain testnet, chain id 97. Explorer: https://testnet.bscscan.com
 
