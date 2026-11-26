@@ -11,3 +11,5 @@ typechain-types/
 broadcast/
 out/
 .DS_Store
+design/art/**/*.png
+design/art/*.png
