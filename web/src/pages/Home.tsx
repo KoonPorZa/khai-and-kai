@@ -85,7 +85,7 @@ export function Home() {
   return (
     <div className="home">
       <div className="home-top">
-        {artManifest.hero ? <img className="hero-art" src={artManifest.hero} alt="" aria-hidden="true" loading="lazy" decoding="async" /> : null}
+        {artManifest.hero ? <img className="hero-art" src={artManifest.hero} alt="" aria-hidden="true" width={1600} height={1000} decoding="async" fetchPriority="high" /> : null}
         <Hero />
         <CoopTonight />
       </div>

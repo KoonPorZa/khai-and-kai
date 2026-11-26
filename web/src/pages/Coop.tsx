@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useAccount, useBalance, useBlockNumber, useReadContract, useReadContracts } from "wagmi";
-import { BirdGlyph, EggSvg, Warn } from "../components/Art";
+import { BirdThumb, EggSvg, Warn } from "../components/Art";
 import { ActionButton, useConnectModal } from "../components/Wallet";
 import { kaiAbi } from "../abi/kai";
 import { khaiAbi } from "../abi/khai";
@@ -132,7 +132,7 @@ export function Coop() {
               const overdue = left < 0;
               return (
                 <Link key={String(c.tokenId)} to={`/chicken/${c.tokenId}`} className={`card chicken-card ${overdue ? "is-overdue" : ""}`}>
-                  <span className="chicken-art"><BirdGlyph breed={c.bird.breed} sex={c.bird.sex} plumage={c.bird.plumage} tokenId={c.tokenId} width={70} /></span>
+                  <span className="chicken-art"><BirdThumb breed={c.bird.breed} sex={c.bird.sex} plumage={c.bird.plumage} tokenId={c.tokenId} width={70} /></span>
                   <span className="chicken-meta">
                     <span className="strong">{speciesLabel(c.bird.breed, c.bird.sex)}</span>
                     <span className="mono muted small">{bandId(c.tokenId)}</span>
@@ -152,7 +152,7 @@ export function Coop() {
 
       {empty ? (
         <section className="card empty">
-          {artManifest.emptyCoop ? <img className="empty-art" src={artManifest.emptyCoop} alt="" aria-hidden="true" loading="lazy" /> : <EggSvg width={56} />}
+          {artManifest.emptyCoop ? <img className="empty-art" src={artManifest.emptyCoop} width={800} height={600} alt="" aria-hidden="true" loading="lazy" decoding="async" /> : <EggSvg width={56} />}
           <div className="strong">Your coop is empty</div>
           <p className="muted">Hatch your first egg to sponsor a bird. It takes two confirmations and about ten seconds.</p>
           <Link to="/eggs" className="btn btn-primary">Get an egg</Link>

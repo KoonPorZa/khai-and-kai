@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAccount, useBlockNumber } from "wagmi";
 import { parseEventLogs } from "viem";
 import { kaiAbi } from "../abi/kai";
-import { BirdGlyph, Check } from "../components/Art";
+import { BirdThumb, Check } from "../components/Art";
 import { HatchAnimation, type HatchPhase } from "../components/HatchAnimation";
 import { ActionButton } from "../components/Wallet";
 import { deployment, networkLabel, targetChain } from "../config/chains";
@@ -125,7 +125,7 @@ export function HatchPage() {
           onSettled={() => setSettled(true)}
           label={done ? "Your chicken has hatched" : "An egg about to hatch"}
         >
-          {bird ? <BirdGlyph breed={bird.bird.breed} sex={bird.bird.sex} plumage={bird.bird.plumage} tokenId={bird.tokenId} width={200} label={speciesLabel(bird.bird.breed, bird.bird.sex)} /> : null}
+          {bird ? <BirdThumb breed={bird.bird.breed} sex={bird.bird.sex} plumage={bird.bird.plumage} tokenId={bird.tokenId} width={200} label={speciesLabel(bird.bird.breed, bird.bird.sex)} /> : null}
         </HatchAnimation>
 
         {done ? (

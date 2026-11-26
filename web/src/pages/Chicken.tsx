@@ -11,7 +11,6 @@ import { deployment, EXPLORER, nativeSymbol, networkLabel, targetChain } from ".
 import { useCareParams, useChicken, useHatch } from "../hooks/useChain";
 import { useChainNow } from "../hooks/useChainNow";
 import { useTx } from "../hooks/useTx";
-import { artManifest } from "../lib/art";
 import { decodeTokenUri, isImageDataUri } from "../lib/chickenArt";
 import { ageLabel, bandId, clockTime, formatDate, formatDuration, formatNative, periodLabel, plumageName, shortHex, speciesLabel } from "../lib/format";
 
@@ -118,7 +117,7 @@ export function ChickenPage() {
           <div className="portrait">
             <span className="portrait-thai" lang="th" aria-hidden="true">ไก่</span>
             <BreedPortrait breed={c.bird.breed} sex={c.bird.sex} plumage={c.bird.plumage} tokenId={c.tokenId} />
-            <span className="chip">{artManifest.breeds[String(c.bird.breed)] ? "Breed illustration" : "Drawn from its traits"}</span>
+            <span className="chip">Breed illustration</span>
           </div>
 
           <div className="stack tight-gap">

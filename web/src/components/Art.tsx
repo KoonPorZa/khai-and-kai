@@ -48,8 +48,15 @@ export function BirdGlyph({ breed, sex, plumage, tokenId, width = 70, label }: {
 export function BreedPortrait({ breed, sex, plumage, tokenId }: { breed: number; sex: number; plumage: number; tokenId?: number | bigint }) {
   const label = `Breed portrait: a ${plumageName(plumage).toLowerCase()} ${breedName(breed)} ${sexName(sex)}`;
   const src = artManifest.breeds[String(breed)];
-  if (src) return <img className="portrait-img" src={src} alt={label} />;
+  if (src) return <img className="portrait-img" src={src} width={768} height={768} alt={label} decoding="async" />;
   return <BirdGlyph breed={breed} sex={sex} plumage={plumage} tokenId={tokenId} width={280} label={label} />;
+}
+
+/** Breed illustration as a small square thumbnail, falling back to the kit drawing. */
+export function BirdThumb({ breed, sex, plumage, tokenId, width, label }: { breed: number; sex: number; plumage: number; tokenId?: number | bigint; width: number; label?: string }) {
+  const src = artManifest.breeds[String(breed)];
+  if (src) return <img className="bird-glyph" src={src} width={width} height={width} alt={label ?? ""} aria-hidden={label ? undefined : true} loading="lazy" decoding="async" />;
+  return <BirdGlyph breed={breed} sex={sex} plumage={plumage} tokenId={tokenId} width={width} label={label} />;
 }
 
 export function Check({ size = 20 }: { size?: number }) {

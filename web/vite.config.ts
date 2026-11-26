@@ -25,8 +25,11 @@ function socialPreview(): Plugin {
     transformIndexHtml() {
       const file = new URL("./src/art/manifest.json", import.meta.url);
       const og = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as { og?: string | null }).og : null;
-      if (!og) return [];
+      const hero = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as { hero?: string | null }).hero : null;
+      const preload = hero ? [{ tag: "link", attrs: { rel: "preload", as: "image", href: hero, media: "(min-width: 900px)" }, injectTo: "head" as const }] : [];
+      if (!og) return preload;
       return [
+        ...preload,
         { tag: "meta", attrs: { property: "og:image", content: og }, injectTo: "head" },
         { tag: "meta", attrs: { name: "twitter:card", content: "summary_large_image" }, injectTo: "head" },
         { tag: "meta", attrs: { name: "twitter:image", content: og }, injectTo: "head" },
