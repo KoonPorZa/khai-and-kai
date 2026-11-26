@@ -1,6 +1,17 @@
 {
   "hero": "/art/hero.webp",
-  "og": null,
-  "emptyCoop": null,
-  "breeds": {}
+  "og": "/art/og.webp",
+  "emptyCoop": "/art/empty-coop.webp",
+  "breeds": {
+    "0": "/art/breeds/0-silkie.webp",
+    "1": "/art/breeds/1-brahma.webp",
+    "2": "/art/breeds/2-serama.webp",
+    "3": "/art/breeds/3-polish.webp",
+    "4": "/art/breeds/4-cochin.webp",
+    "5": "/art/breeds/5-sebright.webp",
+    "6": "/art/breeds/6-orpington.webp",
+    "7": "/art/breeds/7-wyandotte.webp",
+    "8": "/art/breeds/8-leghorn.webp",
+    "9": "/art/breeds/9-sussex.webp"
+  }
 }

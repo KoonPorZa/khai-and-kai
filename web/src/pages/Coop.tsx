@@ -9,6 +9,7 @@ import { deployment, nativeSymbol, targetChain } from "../config/chains";
 import { useChainNow } from "../hooks/useChainNow";
 import { useTx } from "../hooks/useTx";
 import { bandId, formatDuration, formatNative, formatNumber, speciesLabel } from "../lib/format";
+import { artManifest } from "../lib/art";
 import { hatchIdFromReceipt } from "../lib/receipt";
 
 const chainId = targetChain.id;
@@ -151,7 +152,7 @@ export function Coop() {
 
       {empty ? (
         <section className="card empty">
-          <EggSvg width={56} />
+          {artManifest.emptyCoop ? <img className="empty-art" src={artManifest.emptyCoop} alt="" aria-hidden="true" loading="lazy" /> : <EggSvg width={56} />}
           <div className="strong">Your coop is empty</div>
           <p className="muted">Hatch your first egg to sponsor a bird. It takes two confirmations and about ten seconds.</p>
           <Link to="/eggs" className="btn btn-primary">Get an egg</Link>
